@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# ensure that a test suite failure is registered
+set -e
+
+# ensure we test installed version
+mv src/pikepdf src/disabled
+
+py.test-3
+
+# comply with rw-build-tree
+mv src/disabled src/pikepdf

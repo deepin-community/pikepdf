@@ -1,0 +1,9 @@
+Document: pikepdf
+Title: pikepdf documentation
+Author: James R. Barlow
+Abstract: Instructions for using pikepdf
+Section: Graphics
+
+Format: HTML
+Index: /usr/share/doc/python3-pikepdf/html/index.html
+Files: /usr/share/doc/python3-pikepdf/html/*.html

@@ -1,0 +1,10 @@
+Tests: test-suite
+Depends: @,
+ python3-pytest,
+ python3-pytest-timeout,
+ python3-pytest-xdist,
+ python3-hypothesis,
+ python3-pil,
+ python3-attr,
+ python3-psutil,
+ python3-tomli,

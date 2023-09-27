@@ -1,0 +1,19 @@
+Forwarded: not-needed
+Description: Drop non-DFSG-compatible image from docs
+
+--- a/docs/tutorial.rst
++++ b/docs/tutorial.rst
+@@ -200,13 +200,6 @@
+ Saving changes
+ --------------
+ 
+-.. figure:: /images/save-pike.jpg
+-   :align: right
+-   :alt: Sign that reads "Help the pike survive"
+-   :figwidth: 40%
+-
+-   Saving pike.
+-
+ Naturally, you can save your changes with :meth:`pikepdf.Pdf.save`.
+ ``filename`` can be a :class:`pathlib.Path`, which we accept everywhere.
+ 

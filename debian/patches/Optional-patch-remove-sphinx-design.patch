@@ -1,0 +1,39 @@
+Forwarded: not-needed
+From: "James R. Barlow" <james@purplerock.ca>
+Date: Mon, 26 Sep 2022 23:21:43 -0700
+Subject: Optional patch: remove sphinx-design
+
+For Debian's pikepdf docs build.
+
+(cherry picked from commit bfe76fdeb2d1a94b121493caacc7131a9232cb4f)
+
+--- a/docs/conf.py
++++ b/docs/conf.py
+@@ -32,7 +32,6 @@
+     'sphinx.ext.autosummary',
+     'sphinx.ext.napoleon',
+     'sphinx_issues',
+-    'sphinx_design',
+     'IPython.sphinxext.ipython_console_highlighting',
+     'IPython.sphinxext.ipython_directive',
+     'fix_pybind11_autodoc',
+--- a/docs/requirements.txt
++++ b/docs/requirements.txt
+@@ -13,7 +13,6 @@
+ pybind11
+ Sphinx >= 3
+ sphinx-issues
+-sphinx-design
+ sphinx-rtd-theme
+ tomli; python_version < '3.11'
+ 
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -49,7 +49,6 @@
+   "matplotlib",
+   "pybind11",
+   "requests",
+-  "sphinx-design",
+   "sphinx-issues",
+   "sphinx-rtd-theme",
+   "tomli;python_version < '3.11'",

@@ -1,4 +1,42 @@
 #!/usr/bin/make -f
 
+include /usr/share/dpkg/pkg-info.mk
+export DEB_VERSION_UPSTREAM
+
+# deal with unicode encoding/decoding errors in the package build.
+# This isn't needed in d/tests/test-suite because autopkgtest sets
+# LANG=C.UTF-8
+export LC_ALL=C.UTF-8
+
+# needed as we have more than one binary package
+export PYBUILD_DESTDIR=debian/python3-pikepdf
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
 %:
-	dh $@
+	dh $@ --with python3,sphinxdoc --buildsystem=pybuild
+
+override_dh_auto_clean:
+	rm -rf docs/_build
+	rm -rf src/pikepdf.egg-info
+	dh_auto_clean
+
+override_dh_auto_build: export http_proxy=127.0.0.1:9
+override_dh_auto_build: export https_proxy=127.0.0.1:9
+override_dh_auto_build:
+	dh_auto_build
+	@set -ex; cd docs; \
+		PYTHONPATH=$$(python3 --version | perl \
+			-wne'/^Python 3.([0-9]+)/ \
+				and print "../.pybuild/cpython3_3.$$1/build"') \
+			make html
+
+# don't install installation instructions
+override_dh_install:
+	dh_install -Xinstallation
+override_dh_sphinxdoc:
+	dh_sphinxdoc -Xinstallation
+
+# for some reason this gets compressed, breaking links
+override_dh_compress:
+	dh_compress -Xchangelog.html

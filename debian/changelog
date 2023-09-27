@@ -1,5 +1,405 @@
-template-repository (1.0-1) unstable; urgency=medium
+pikepdf (8.4.1+dfsg-1) unstable; urgency=medium
 
-  * Initial release
+  * New upstream release.
 
- -- Tsic404 <liuheng@deepin.org>  Sat, 28 Jan 2023 13:46:49 +0800
+ -- Vincent Cheng <vcheng@debian.org>  Sun, 10 Sep 2023 08:28:02 -0700
+
+pikepdf (8.4.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Cheng <vcheng@debian.org>  Tue, 22 Aug 2023 03:26:44 -0700
+
+pikepdf (8.3.2+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Cheng <vcheng@debian.org>  Sat, 12 Aug 2023 14:02:47 -0700
+
+pikepdf (8.3.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Cheng <vcheng@debian.org>  Wed, 09 Aug 2023 11:21:00 -0700
+
+pikepdf (8.2.3+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Refresh patches.
+
+ -- Vincent Cheng <vcheng@debian.org>  Wed, 02 Aug 2023 23:24:57 -0700
+
+pikepdf (8.2.2+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Cheng <vcheng@debian.org>  Sat, 29 Jul 2023 18:08:50 -0700
+
+pikepdf (8.2.1+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Cheng <vcheng@debian.org>  Tue, 25 Jul 2023 01:03:51 -0700
+
+pikepdf (8.2.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Cheng <vcheng@debian.org>  Fri, 21 Jul 2023 22:46:27 -0700
+
+pikepdf (8.1.1+dfsg-1) unstable; urgency=medium
+
+  * Adopt package and add myself as Uploader. (Closes: #1017873)
+  * New upstream release. (Closes: #1030340)
+    - Drop docs-build-use-DEB_VERSION_UPSTREAM.patch.
+    - Refresh remaining patches.
+  * Add build-depends on pybuild-plugin-pyproject.
+  * Update dh compat level to 13.
+  * Update Standards version to 4.6.2.
+
+ -- Vincent Cheng <vcheng@debian.org>  Sun, 16 Jul 2023 22:04:06 -0700
+
+pikepdf (6.0.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release (Closes: #1019694).
+  * Drop python3-setuptools-scm-git-archive, python3-sphinx-panels build-deps.
+  * Add Optional-patch-remove-sphinx-design.patch.
+  * Extend docs-build-use-DEB_VERSION_UPSTREAM.patch to src/pikepdf/_version.py.
+  * Refresh remaining patches.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Wed, 28 Sep 2022 14:18:59 -0700
+
+pikepdf (5.1.1+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Cherry-pick upstream commit 4f6923f (Closes: #1009737).
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Fri, 15 Apr 2022 14:49:08 -0700
+
+pikepdf (5.0.1+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Tue, 01 Mar 2022 13:13:09 -0700
+
+pikepdf (5.0.0+dfsg-2) unstable; urgency=medium
+
+  * Update b-d python3-toml -> python3-tomli.
+  * Add autopkgtest dep on python3-tomli (Closes: #1006123).
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Sun, 20 Feb 2022 13:16:51 -0700
+
+pikepdf (5.0.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release (Closes: #1005766).
+  * Refresh patches.
+  * Add build-deps qpdf 10.6.2, python3-sphinx-panels, python3-packaging.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Fri, 18 Feb 2022 13:13:43 -0700
+
+pikepdf (4.2.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release (Closes: #996881, #1002424).
+  * Update path in d/copyright src/gsl.h -> src/qpdf/gsl.h.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Thu, 23 Dec 2021 15:37:35 -0700
+
+pikepdf (3.2.0+dfsg-2) unstable; urgency=medium
+
+  * Drop python3-pytest-helpers-namespace from autopkgtest dependencies.
+    No longer required by upstream's test suite.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Mon, 18 Oct 2021 14:35:54 -0700
+
+pikepdf (3.2.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release (Closes: #996792).
+  * Add build-deps on python3-toml, python3-sphinx-issues.
+  * Update d/copyright for new release.
+    - Drop stanzas for mp_compile.py, QIntC.hh and docs/images/pike-tree.jpg.
+    - Update path docs/images/pike.{jpg->png}.
+    - Add stanza for tests/resources/Gray.icc.
+  * Drop drop-pybind11-from-setup.py.patch.
+    No longer required.
+  * Drop Fix-compatibility-with-pybind11.patch.
+    Obsoleted by upstream changes.
+  * Drop patches corresponding to cherry-picks from upstream.
+  * Refresh remaining patches.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Mon, 18 Oct 2021 14:00:32 -0700
+
+pikepdf (1.17.3+dfsg-5) unstable; urgency=medium
+
+  * Cherry pick upstream commit 3f38f73 to fix CVE-2021-29421 (Closes: #986274).
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Fri, 09 Apr 2021 10:41:33 -0700
+
+pikepdf (1.17.3+dfsg-4) unstable; urgency=medium
+
+  * Cherry-pick upstream commit 7ca375cb to fix another broken text
+    (Closes: #981465).
+    Thanks to Jay Berkenbilt for investigation.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Mon, 01 Feb 2021 10:19:39 -0700
+
+pikepdf (1.17.3+dfsg-3) unstable; urgency=medium
+
+  * Fix bug number closed by previous upload.
+  * Cherry-pick upstream commits 7ac9b058 and fe4b568a for compatibility
+    with qpdf 10.1.0 (Closes: #980426).
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Tue, 19 Jan 2021 14:10:44 -0700
+
+pikepdf (1.17.3+dfsg-2) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * Bump debhelper from old 10 to 12.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit.
+
+  [ Ondřej Nový ]
+  * d/control: Update Maintainer field with new Debian Python Team
+    contact address.
+  * d/control: Update Vcs-* fields with new Debian Python Team Salsa
+    layout.
+
+  [ Sean Whitton ]
+  * Fix compatibility with pybind11 (Closes: #975202).
+    Thanks to Matthias Klose for the patch.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Thu, 24 Dec 2020 22:33:32 -0700
+
+pikepdf (1.17.3+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Update d/copyright for several new files.
+    Thanks to upstream for help with this.
+    - Drop tests/resources/tree* from Files-Excluded:, and Comment: field
+    - Add stanzas for new test resources, src/gsl.h and src/QIntC.hh
+    - Update upstream's copyright years in Files: * stanza.
+  * Fix "Licence"->"License" in an existing stanza.
+  * Drop disable-test_icc_extract.patch
+    - Test dropped upstream.
+  * Refresh remaining patches.
+  * Add python3-psutil autopkgtest dependency.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Sun, 26 Jul 2020 15:47:36 -0700
+
+pikepdf (1.13.0+dfsg-2) unstable; urgency=medium
+
+  * Add runtime dependency on python3-pkg-resources (Closes: #965103).
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Sat, 18 Jul 2020 10:57:32 -0700
+
+pikepdf (1.13.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Add stanza for tests/resources/outlines.pdf to d/copyright.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Sun, 17 May 2020 17:11:59 -0700
+
+pikepdf (1.12.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Sun, 17 May 2020 16:50:08 -0700
+
+pikepdf (1.11.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Update Files-Excluded:
+    - Remove tests/resources/enron1_gs.pdf
+    - Add docs/images/save-pike.jpg
+      Although <https://commons.wikimedia.org/wiki/File:SaveDePike.jpg>
+      says the photo is public domain, it is possible that the photographed
+      sign itself is under copyright.  The file is not essential so playing
+      it safe.
+  * Drop disable-test_docinfo_problems.patch.
+    Tests have been updated to use a different file, which we have.
+  * Add drop-save-pike.patch.
+  * Refresh remaining patches.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Wed, 15 Apr 2020 16:21:33 -0700
+
+pikepdf (1.10.3+dfsg-1) unstable; urgency=medium
+
+  * New upstream release (Closes: #955045).
+  * Add docs/images/28fish.jpg to d/copyright.
+  * Refresh patch.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Fri, 27 Mar 2020 08:50:15 -0700
+
+pikepdf (1.10.2+dfsg-2) unstable; urgency=medium
+
+  * In d/rules, when setting PYTHONPATH to build the HTML docs, add only
+    the subdirectory of .pybuild corresponding to the version of Python
+    which will actually be used to build the docs.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Sat, 21 Mar 2020 21:44:24 -0700
+
+pikepdf (1.10.2+dfsg-1) unstable; urgency=medium
+
+  * New upstream release (Closes: #950138).
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Sat, 29 Feb 2020 08:56:25 -0700
+
+pikepdf (1.10.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Refresh patch.
+  * Set http{s,}_proxy for override_dh_auto_build to prevent sphinx
+    attempting to fetch intersphinx inventory files.
+    Thanks, LibraryStyleGuide page on Debian Wiki.
+  * Fix HTML docs build:
+    - Add python3-pil build-dep
+    - Run dh_auto_build first, then try to build docs.
+      Previously we were doing the reverse.
+    - Set PYTHONPATH.
+  * Drop superfluous '-O--buildsystem=pybuild'.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Mon, 27 Jan 2020 20:42:14 -0700
+
+pikepdf (1.8.1+dfsg-1) unstable; urgency=medium
+
+  * New upstream release (Closes: #946575).
+  * Fix some paths 'test'->'tests' in d/copyright.
+  * Update d/copyright for new test resource.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Wed, 11 Dec 2019 11:38:08 -0700
+
+pikepdf (1.7.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Tue, 12 Nov 2019 09:40:42 -0700
+
+pikepdf (1.6.5+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Tighten pybind11 build-dep to require 2.4.3.
+  * Refresh patches.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Fri, 01 Nov 2019 20:16:42 -0700
+
+pikepdf (1.6.4+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Thu, 10 Oct 2019 10:15:17 -0700
+
+pikepdf (1.6.3+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Thu, 05 Sep 2019 07:30:45 -0700
+
+pikepdf (1.6.1+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Tighten libqpdf build-dep to require 8.4.2.
+  * Add mp_compile.py stanza to d/copyright.
+  * Refresh patches.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Fri, 16 Aug 2019 09:03:02 +0100
+
+pikepdf (1.5.0.post0+dfsh-1) unstable; urgency=medium
+
+  [ Sean Whitton ]
+  * New upstream release.
+    - Drop python3-defusedxml build-dep
+    - Drop python3-pytest-runner build-dep
+      + Drop rw-build-tree d/tests/control restriction
+    - Tighten python3-pybind11 dependency to require 2.3.0.
+  * Add drop-pybind11-from-setup.py.patch, disable-test_icc_extract.patch.
+  * Drop Fix-issue-25-year-missing-leading-zero-on-some-platforms.patch,
+    drop-setuptools_scm_git_archive-from-setup.py.patch and
+    fix_xmp_metadata_without_xmpmeta_wrapper.patch.
+  * Refresh remaining patches.
+  * d/copyright updates:
+    - Update Files-Excluded
+    - Update upstream copyright years.
+    - Add info for docs/images/pike-{release,tree}.jpg,
+      tests/resources/pike-flate-jp2.pdf
+
+  [ Ondřej Nový ]
+  * Use debhelper-compat instead of debian/compat.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Thu, 15 Aug 2019 18:47:38 +0100
+
+pikepdf (1.0.5+dfsg-3) unstable; urgency=medium
+
+  * Cherry pick upstream commit 4d22fe4 as
+    Fix-issue-25-year-missing-leading-zero-on-some-platforms.patch
+    (Closes: #928042).
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Sun, 28 Apr 2019 18:23:41 -0700
+
+pikepdf (1.0.5+dfsg-2) unstable; urgency=medium
+
+  * Team upload.
+  * Fix handling of XMP metadata with no <x:xmpmeta> wrapper.
+    - Cherry-pick upstream fix as fix_xmp_metadata_without_xmpmeta_wrapper.patch
+
+ -- Felix Geyer <fgeyer@debian.org>  Wed, 27 Feb 2019 23:33:07 +0100
+
+pikepdf (1.0.5+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Refresh patches.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Sat, 26 Jan 2019 12:54:11 -0700
+
+pikepdf (1.0.4+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Add Files-Excluded to d/copyright.
+      See https://github.com/pikepdf/pikepdf/issues/21
+    - Add disable-test_docinfo_problems.patch
+  * Install examples/find_links.py
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Thu, 10 Jan 2019 08:44:33 -0700
+
+pikepdf (0.10.1-2) unstable; urgency=medium
+
+  * Upload to unstable.
+    Upstream considers the API to be stable.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Tue, 01 Jan 2019 09:19:08 +0000
+
+pikepdf (0.10.1-1) experimental; urgency=medium
+
+  * New upstream release.
+    - Add python3-defusedxml, python3-lxml build-deps
+    - Add python3-attr autopkgtest dep
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Mon, 31 Dec 2018 23:25:17 +0000
+
+pikepdf (0.3.7-1) experimental; urgency=medium
+
+  * New upstream release.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Sun, 11 Nov 2018 14:29:02 -0700
+
+pikepdf (0.3.5-1) experimental; urgency=medium
+
+  * New upstream release.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Sat, 20 Oct 2018 13:06:33 -0700
+
+pikepdf (0.3.4-1) experimental; urgency=medium
+
+  * New upstream release.
+  * Add build-dep on python3-setuptools-scm-git-archive.
+  * Update d/copyright for new files.
+  * Drop 0001-Restore-Exhibit-B-text-clarify-license-comments-in-r.patch
+    Included in this upstream release.
+  * Add drop-setuptools_scm_git_archive-from-setup.py.patch.
+  * Refresh drop-installation-from-docs-contents.patch.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Wed, 10 Oct 2018 08:28:28 -0700
+
+pikepdf (0.3.0-1) experimental; urgency=medium
+
+  * Initial upload, to experimental (Closes: #903625).
+    API not yet finalised.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Thu, 30 Aug 2018 16:21:39 -0700

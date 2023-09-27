@@ -1,0 +1,3 @@
+drop-installation-from-docs-contents.patch
+drop-save-pike.patch
+Optional-patch-remove-sphinx-design.patch

@@ -1,3 +1,165 @@
+v8.15.1
+=======
+
+- Reformat with ruff.
+- Various updates to build procedures and wheel generation.
+
+v8.15.0
+=======
+
+- Rebuild wheels with QPDF 11.9.0.
+- Relaxed dependency requirements on lxml, now that that project is publishing wheels
+  for less common platforms again.
+
+v8.14.0
+=======
+
+- Added new code to suppress console window from appearing on Windows in some
+  situations when decoding JBIG2.
+- Updated GitHub Actions versions.
+- Added QPDF_FUTURE environment variable for compile-time testing of new QPDF
+  features. This option is mainly for the developers of QPDF to confirm that pikepdf
+  supports change they are considering in future releases; other users will not
+  gain any benefit.
+
+v8.13.0
+=======
+
+- Enabled PyPy 3.10 support.
+
+v8.12.0
+=======
+
+- Rebuilt wheels with QPDF 11.8.0.
+- Improved test coverage slightly.
+- Minor performance improvement when using file streams.
+- Minor update to metadata documentation.
+
+v8.11.2
+=======
+
+- Fixed handling of XMP metadata when metadata contains objects in a default
+  namespace.
+
+v8.11.1
+=======
+
+- macOS wheels are now linked against the GnuTLS crypto library instead of
+  OpenSSL. Hopefully this will alleviate situations where the legacy crypto
+  provider could not be loaded. :issue:`520`
+- Replaced all relative imports with absolute imports.
+- Excluded lxml 5.x for Python 3.8 and 3.9, since this project is not producing
+  wheels for 3.8 and 3.9 for the latest versions.
+
+v8.11.0
+=======
+
+- Rebuilt with QPDF 11.7.0.
+- Added support for setting page boxes to a rectangle directly, e.g.
+  ``page.mediabox = rectangle`` - previously rectangle had to
+  manually converted to an array.
+- Fixed rendering of PDF and individual pages in Jupyter/IPython. Newer versions
+  of these tools are now pickier about what types of data they render, and don't
+  render PDFs directly; we now provide SVG which works well. Requires installation
+  of MuPDF as before.
+- Fixed rendering of inline images in Jupyter/IPython, which was not implemented.
+- Fixed build process to use new artifacts v4 actions on GitHub.
+
+v8.10.1
+=======
+
+- Rebuilt with QPDF 11.6.4.
+- Replaced use of a custom C++ logger with sharing QPDF's. It is still relayed to
+  the Python logger.
+- Added a simpler API for adding attachments from bytes data.
+- Deprecated use of Object.parse(str) in favor of Object.parse(bytes).
+
+v8.10.0
+=======
+
+- Fixed a performance regression when appending thousands of pages from one PDF to
+  another.
+- Fixed some obscure issues with iterators over ``Pdf.pages`` that would have led
+  to incorrect or unintuitive behavior, like partial iteration not being accounted
+  for.
+- Using the ``Pdf.pages`` API to insert objects other ``pikepdf.Pdf`` is now
+  deprecated. Previously, we accepted ``pikepdf.Dictionary`` that had its ``/Type``
+  set to ``/Page``. Now, one must wrap these dictionaries in ``pikepdf.Page()``.
+- Added type hints that ``pikepdf.Object`` can be implicitly converted to float
+  and int.
+
+v8.9.0
+======
+
+- Overhauled documentation. Previously the documentation could only be generated in
+  an environment where pikepdf was compiled and installed, since generating the final
+  result depended on executing pikepdf. Now, these dynamic features are removed and
+  the documentation is static. All documentation that was defined in C++ has been
+  pulled out and defined in Python stub files instead, which means compiled binaries
+  are no longer needed to access documentation. This change simplifies the generation of
+  documentation and makes it easier for IDEs to look up function signatures.
+- Similarly, typing is now defined only in Python stub files.
+
+v8.8.0
+======
+
+- Added new ``pikepdf.canvas`` module with rudimentary content stream creation
+  functions.
+
+v8.7.1
+======
+
+- Fixed ``pikepdf.Matrix.rotated()`` so it now rotates in the advertised direction.
+
+v8.7.0
+======
+
+- ``pikepdf.PdfMatrix`` is now deprecated, in favor of ``pikepdf.Matrix``. The former,
+  unfortunately, implemented some operations backwards compared to the PDF reference
+  manual. The new class fixes these issues, and adds more functionality, promoting
+  transformation matrix to first class objects. ``PdfMatrix`` is now deprecated and
+  will be removed in the next major release.
+- Improve behavior around truthiness of ``pikepdf.Name``.
+
+v8.6.0
+======
+
+- Implemented Page.artbox and Page.bleedbox to access these page dimension boxes.
+
+v8.5.3
+======
+
+- Fixed exception on certain ``PdfImage.__repr__`` when the image's mode was invalid.
+- Fixed some minor issues that caused code coverage to miss some covered lines.
+- Removed some unused code.
+
+v8.5.2
+======
+
+- Rebuilt wheels with libqpdf 11.6.3, which solves a potential data loss issue,
+  albeit in rare circumstances. See `QPDF issue #1050 <https://github.com/qpdf/qpdf/issues/1050>`_.
+- Fixed unclear return values of pikepdf._core.set/get* functions. The set functions
+  now return the current value.
+- Fixed minor typing issues.
+
+v8.5.1
+======
+
+- Added building of Python 3.12 aarch64 images.
+- Added building of musllinux_1_2 aarch64 images.
+- Tweaked exception handler of ``atomic_overwrite``.
+
+v8.5.0
+======
+
+- We now require Pillow 10.0.1, due a serious security vulnerability in all earlier
+  versions of that dependency. The vulnerability concerns WebP images, which are
+  likely not involved in PDF processing, but we have updated the dependency anyway
+  as a precaution. As a consequence, we no longer build binary wheels for PyPy 3.8.
+  CPython 3.8 is still supported on all platforms.
+- The embedded files/attachments API now supports describing the relationship of the
+  attached file (AFRelationship).
+
 v8.4.1
 ======
 

@@ -10,7 +10,8 @@ from enum import Enum
 from itertools import chain
 from typing import Iterable, List, cast
 
-from pikepdf import Array, Dictionary, Name, Object, Page, Pdf, String
+from pikepdf._core import Page, Pdf
+from pikepdf.objects import Array, Dictionary, Name, Object, String
 
 
 class PageLocation(Enum):
@@ -297,6 +298,15 @@ class Outline:
 
     def __repr__(self):
         return f'<pikepdf.{self.__class__.__name__}: {len(self.root)} items>'
+
+    def _repr_pretty_(self, p, cycle):
+        if cycle:
+            p.text("...")
+        else:
+            with p.group(2, "pikepdf.models.outlines.Outline<\n", "\n>"):
+                for _, item in enumerate(self.root):
+                    p.breakable()
+                    p.pretty(str(item))
 
     def __enter__(self):
         self._updating = True

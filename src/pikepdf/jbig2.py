@@ -10,6 +10,7 @@ jbig2dec.
 from __future__ import annotations
 
 import os
+import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 from subprocess import DEVNULL, PIPE, CalledProcessError, run
@@ -20,35 +21,12 @@ from PIL import Image
 
 from pikepdf._exceptions import DependencyError
 
+if sys.platform == 'win32':
+    from subprocess import CREATE_NO_WINDOW
 
-def _extract_jbig2_bytes(jbig2: bytes, jbig2_globals: bytes) -> bytes:
-    with TemporaryDirectory(prefix='pikepdf-', suffix='.jbig2') as tmpdir:
-        image_path = Path(tmpdir) / "image"
-        global_path = Path(tmpdir) / "global"
-        output_path = Path(tmpdir) / "outfile"
-
-        args = [
-            "jbig2dec",
-            "--embedded",
-            "--format",
-            "png",
-            "--output",
-            os.fspath(output_path),
-        ]
-
-        # Get the raw stream, because we can't decode im_obj - that is why we are here
-        # (Strictly speaking we should remove any non-JBIG2 filters if double encoded)
-        image_path.write_bytes(jbig2)
-
-        if len(jbig2_globals) > 0:
-            global_path.write_bytes(jbig2_globals)
-            args.append(os.fspath(global_path))
-
-        args.append(os.fspath(image_path))
-
-        run(args, stdout=DEVNULL, check=True)
-        with Image.open(output_path) as im:
-            return im.tobytes()
+    CREATION_FLAGS: int = CREATE_NO_WINDOW
+else:
+    CREATION_FLAGS = 0
 
 
 class JBIG2DecoderInterface(ABC):
@@ -75,6 +53,11 @@ class JBIG2DecoderInterface(ABC):
 class JBIG2Decoder(JBIG2DecoderInterface):
     """JBIG2 decoder implementation."""
 
+    def __init__(self, *, subprocess_run=run, creationflags=CREATION_FLAGS):
+        """Initialize the decoder."""
+        self._run = subprocess_run
+        self._creationflags = creationflags
+
     def check_available(self) -> None:
         """Check if jbig2dec is installed and usable."""
         version = self._version()
@@ -83,12 +66,46 @@ class JBIG2Decoder(JBIG2DecoderInterface):
 
     def decode_jbig2(self, jbig2: bytes, jbig2_globals: bytes) -> bytes:
         """Decode JBIG2 from binary data, returning decode bytes."""
-        return _extract_jbig2_bytes(jbig2, jbig2_globals)
+        with TemporaryDirectory(prefix='pikepdf-', suffix='.jbig2') as tmpdir:
+            image_path = Path(tmpdir) / "image"
+            global_path = Path(tmpdir) / "global"
+            output_path = Path(tmpdir) / "outfile"
+
+            args = [
+                "jbig2dec",
+                "--embedded",
+                "--format",
+                "png",
+                "--output",
+                os.fspath(output_path),
+            ]
+
+            # Get the raw stream, because we can't decode im_obj
+            # (that is why we're here).
+            # (Strictly speaking we should remove any non-JBIG2 filters if double
+            # encoded).
+            image_path.write_bytes(jbig2)
+
+            if len(jbig2_globals) > 0:
+                global_path.write_bytes(jbig2_globals)
+                args.append(os.fspath(global_path))
+
+            args.append(os.fspath(image_path))
+
+            self._run(
+                args, stdout=DEVNULL, check=True, creationflags=self._creationflags
+            )
+            with Image.open(output_path) as im:
+                return im.tobytes()
 
     def _version(self) -> Version:
         try:
-            proc = run(
-                ['jbig2dec', '--version'], stdout=PIPE, check=True, encoding='ascii'
+            proc = self._run(
+                ['jbig2dec', '--version'],
+                stdout=PIPE,
+                check=True,
+                encoding='ascii',
+                creationflags=self._creationflags,
             )
         except (CalledProcessError, FileNotFoundError) as e:
             raise DependencyError("jbig2dec - not installed or not found") from e
@@ -100,9 +117,15 @@ class JBIG2Decoder(JBIG2DecoderInterface):
             return Version(version_str)
 
 
-_jbig2_decoder = JBIG2Decoder()
+_jbig2_decoder: JBIG2DecoderInterface = JBIG2Decoder()
 
 
 def get_decoder() -> JBIG2DecoderInterface:
     """Return an instance of a JBIG2 decoder."""
     return _jbig2_decoder
+
+
+def set_decoder(jbig2_decoder: JBIG2DecoderInterface) -> None:
+    """Set the JBIG2 decoder to use."""
+    global _jbig2_decoder
+    _jbig2_decoder = jbig2_decoder

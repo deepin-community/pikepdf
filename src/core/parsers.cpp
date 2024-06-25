@@ -27,12 +27,58 @@ void PyParserCallbacks::handleEOF()
     );
 }
 
+void check_operand(QPDFObjectHandle obj)
+{
+    switch (obj.getTypeCode()) {
+    case qpdf_object_type_e::ot_null:
+    case qpdf_object_type_e::ot_boolean:
+    case qpdf_object_type_e::ot_integer:
+    case qpdf_object_type_e::ot_real:
+    case qpdf_object_type_e::ot_name:
+    case qpdf_object_type_e::ot_string:
+    case qpdf_object_type_e::ot_inlineimage:
+        break;
+    case qpdf_object_type_e::ot_array: {
+        if (obj.isIndirect()) {
+            throw py::type_error(
+                "Indirect arrays are not allowed in content stream instructions");
+        }
+        for (auto &inner : obj.aitems()) {
+            check_operand(inner);
+        }
+        break;
+    }
+    case qpdf_object_type_e::ot_dictionary: {
+        if (obj.isIndirect()) {
+            throw py::type_error(
+                "Indirect dictionaries are not allowed in content stream instructions");
+        }
+        for (auto &kv : obj.ditems()) {
+            check_operand(kv.second);
+        }
+        break;
+    }
+    default: {
+        throw py::type_error("Only scalar types, arrays, and dictionaries are allowed "
+                             "in content streams.");
+    }
+    }
+}
+
+void check_objects_in_operands(std::vector<QPDFObjectHandle> &operands)
+{
+    for (QPDFObjectHandle &obj : operands) {
+        check_operand(obj);
+    }
+}
+
 ContentStreamInstruction::ContentStreamInstruction(
     ObjectList operands, QPDFObjectHandle operator_)
     : operands(operands), operator_(operator_)
 {
     if (!this->operator_.isOperator())
         throw py::type_error("operator parameter must be a pikepdf.Operator");
+    check_objects_in_operands(this->operands);
 }
 
 std::ostream &operator<<(std::ostream &os, ContentStreamInstruction &csi)
@@ -42,12 +88,6 @@ std::ostream &operator<<(std::ostream &os, ContentStreamInstruction &csi)
     }
     os << csi.operator_.unparseBinary();
     return os;
-}
-
-ContentStreamInlineImage::ContentStreamInlineImage(
-    ObjectList image_metadata, QPDFObjectHandle image_data)
-    : image_metadata(image_metadata), image_data(image_data)
-{
 }
 
 py::object ContentStreamInlineImage::get_inline_image() const
@@ -193,9 +233,9 @@ py::bytes unparse_content_stream(py::iterable contentstream)
         } else {
             op = operator_.cast<QPDFObjectHandle>();
             if (!op.isOperator()) {
-                errmsg
-                    << "At content stream instruction " << n
-                    << ", the operator is not of type pikepdf.Operator, bytes or str";
+                errmsg << "At content stream instruction " << n
+                       << ", the operator is not of type pikepdf.Operator, bytes "
+                          "or str";
                 throw py::type_error(errmsg.str());
             }
         }
@@ -229,10 +269,11 @@ void init_parsers(py::module_ &m)
 {
     py::class_<ContentStreamInstruction>(m, "ContentStreamInstruction")
         .def(py::init<const ContentStreamInstruction &>())
+        .def(py::init<ObjectList, QPDFObjectHandle>())
         .def(py::init([](py::iterable operands, QPDFObjectHandle operator_) {
             ObjectList newlist;
             for (auto &item : operands) {
-                newlist.push_back(objecthandle_encode(item));
+                newlist.emplace_back(objecthandle_encode(item));
             }
             return ContentStreamInstruction(newlist, operator_);
         }))
@@ -301,10 +342,9 @@ void init_parsers(py::module_ &m)
         .def("__repr__", [](ContentStreamInlineImage &csii) {
             std::ostringstream ss;
             ss.imbue(std::locale::classic());
-            ss << "<pikepdf.ContentStreamInlineImage("
-               << "[" << py::repr(csii.get_inline_image()) << "], "
-               << "pikepdf.Operator('INLINE IMAGE')"
-               << ")>";
+            ss << "<pikepdf.ContentStreamInlineImage(" << "["
+               << py::repr(csii.get_inline_image()) << "], "
+               << "pikepdf.Operator('INLINE IMAGE')" << ")>";
             return ss.str();
         });
 }

@@ -121,36 +121,35 @@ public:
         py::gil_scoped_acquire gil; // Must acquire so another thread cannot seek
 
         qpdf_offset_t result   = 0;
-        bool done              = false;
         bool eol_straddles_buf = false;
-        std::string buf(4096, '\0');
+        char rawbuf[4096];
         std::string line_endings = "\r\n";
 
-        while (!done) {
+        while (true) {
             qpdf_offset_t cur_offset = this->tell();
-            size_t len = this->read(const_cast<char *>(buf.data()), buf.size());
+            size_t len               = this->read(rawbuf, sizeof(rawbuf));
             if (len == 0) {
-                done   = true;
                 result = this->tell();
-            } else {
-                size_t found;
-                if (!eol_straddles_buf) {
-                    found = buf.find_first_of(line_endings);
-                    if (found == std::string::npos)
-                        continue;
-                } else {
-                    found = 0;
-                }
-
-                size_t found_end = buf.find_first_not_of(line_endings, found);
-                if (found_end == std::string::npos) {
-                    eol_straddles_buf = true;
-                    continue;
-                }
-                result = cur_offset + found_end;
-                this->seek(result, SEEK_SET);
-                done = true;
+                break;
             }
+            std::string_view buf(rawbuf, len);
+            size_t found;
+            if (!eol_straddles_buf) {
+                found = buf.find_first_of(line_endings);
+                if (found == std::string::npos)
+                    continue;
+            } else {
+                found = 0;
+            }
+
+            size_t found_end = buf.find_first_not_of(line_endings, found);
+            if (found_end == std::string::npos) {
+                eol_straddles_buf = true;
+                continue;
+            }
+            result = cur_offset + found_end;
+            this->seek(result, SEEK_SET);
+            break;
         }
         return result;
     }

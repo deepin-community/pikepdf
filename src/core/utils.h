@@ -3,10 +3,6 @@
 
 #pragma once
 
-#include "pikepdf.h"
-
-py::object fspath(py::object filename);
-
 template <typename T, typename S>
 inline bool str_startswith(T haystack, S needle)
 {

@@ -7,7 +7,10 @@ from __future__ import annotations
 
 from math import cos, pi, sin
 
+from deprecated import deprecated
 
+
+@deprecated('use pikepdf.Matrix instead')
 class PdfMatrix:
     """Support class for PDF content stream matrices.
 
@@ -42,6 +45,9 @@ class PdfMatrix:
 
     PdfMatrix objects are immutable. All transformations on them produce a new
     matrix.
+
+    .. deprecated:: 8.7
+        Use :class:`pikepdf.Matrix` instead.
     """
 
     def __init__(self, *args):
@@ -83,7 +89,8 @@ class PdfMatrix:
     def __matmul__(self, other):
         """Multiply this matrix by another matrix.
 
-        Can be used to concatenate transformations.
+        Can be used to concatenate transformations. Transformations should be composed
+        by pre-multiplying matrices.
         """
         a = self.values
         b = other.values
@@ -117,17 +124,38 @@ class PdfMatrix:
         return PdfMatrix(np.linalg.inv(self.__array__()))
 
     def scaled(self, x, y):
-        """Concatenate a scaling matrix to this matrix."""
+        """Concatenate a scaling matrix to this matrix.
+
+        .. warning::
+            This function is subtly incorrect, because it post-multiplies by the
+            scaling matrix instead of pre-multiplying. It is assumed that any users
+            of the code may have noticed this and corrected it by compensating
+            for it, so correcting the error would be a breaking change.
+        """
         return self @ PdfMatrix((x, 0, 0, y, 0, 0))
 
     def rotated(self, angle_degrees_ccw):
-        """Concatenate a rotation matrix to this matrix."""
+        """Concatenate a rotation matrix to this matrix.
+
+        .. warning::
+            This function is subtly incorrect, because it post-multiplies by the
+            scaling matrix instead of pre-multiplying. It is assumed that any users
+            of the code may have noticed this and corrected it by compensating
+            for it, so correcting the error would be a breaking change.
+        """
         angle = angle_degrees_ccw / 180.0 * pi
         c, s = cos(angle), sin(angle)
         return self @ PdfMatrix((c, s, -s, c, 0, 0))
 
     def translated(self, x, y):
-        """Translate this matrix."""
+        """Translate this matrix.
+
+        .. warning::
+            This function is subtly incorrect, because it post-multiplies by the
+            scaling matrix instead of pre-multiplying. It is assumed that any users
+            of the code may have noticed this and corrected it by compensating
+            for it, so correcting the error would be a breaking change.
+        """
         return self @ PdfMatrix((1, 0, 0, 1, x, y))
 
     @property
@@ -178,9 +206,11 @@ class PdfMatrix:
 
     def encode(self):
         """Encode this matrix in binary suitable for including in a PDF."""
-        return '{:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}'.format(
-            self.a, self.b, self.c, self.d, self.e, self.f
+        return (
+            f'{self.a:.6f} {self.b:.6f} '
+            f'{self.c:.6f} {self.d:.6f} '
+            f'{self.e:.6f} {self.f:.6f}'
         ).encode()
 
     def __repr__(self):
-        return f"pikepdf.PdfMatrix({repr(self.values)})"
+        return f'pikepdf.PdfMatrix({repr(self.values)})'

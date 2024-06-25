@@ -8,7 +8,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from hypothesis import example, given
-from hypothesis.strategies import binary, text
+from hypothesis.strategies import binary
 
 import pikepdf
 from pikepdf import Array, Dictionary, Name, Operator, String
@@ -24,7 +24,6 @@ def test_repr_dict():
             '/Array': Array([1, 2, 3.14]),
             '/Operator': Operator('q'),
             '/Dictionary': Dictionary({'/Color': 'Red'}),
-            '/None': None,
         }
     )
     short_pi = '3.14'
@@ -37,7 +36,6 @@ def test_repr_dict():
                 "/Color": "Red"
             },
             "/Integer": 42,
-            "/None": None,
             "/Operator": pikepdf.Operator("q"),
             "/Real": Decimal('42.42'),
             "/String": "hi"

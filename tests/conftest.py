@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import platform
+import shutil
 import sys
 from pathlib import Path
 
@@ -44,14 +45,17 @@ def refcount():
     return sys.getrefcount
 
 
-skip_if_slow_cpu = pytest.mark.skipif(
-    platform.processor() != 'x86_64', reason="test too slow for rasppi arm"
-)
 skip_if_pypy = pytest.mark.skipif(
     platform.python_implementation() == 'PyPy', reason="test isn't valid for PyPy"
 )
 fails_if_pypy = pytest.mark.xfail(
     platform.python_implementation() == 'PyPy', reason="test known to fail on PyPy"
+)
+skip_if_ci = pytest.mark.skipif(
+    os.environ.get('CI', '') == 'true', reason="test too slow for CI"
+)
+fails_if_no_mutool = pytest.mark.xfail(
+    shutil.which("mutool") is None, reason="test fails without mutool"
 )
 
 

@@ -26,7 +26,14 @@ class Permissions(NamedTuple):
     """
 
     accessibility: bool = True
-    """Can users use screen readers and accessibility tools to read the PDF?"""
+    """Deprecated in PDF 2.0. Formerly used to block accessibility tools.
+
+    In older versions of the PDF specification, it was possible to request
+    a PDF reader to block a user's right to use accessibility tools. Modern
+    PDF readers do not support this archaic feature and always allow accessibility
+    tools to be used. The only purpose of this permission is to provide
+    testing of this deprecated feature.
+    """
 
     extract: bool = True
     """Can users extract contents?"""
@@ -129,6 +136,14 @@ class EncryptionInfo:
         e.g. if the algorithm is AES-256, this returns 256.
         """
         return len(self._encdict['encryption_key']) * 8
+
+    def __repr__(self):
+        return (
+            f'<{self.__class__.__name__}: {self.R=}, {self.V=}, {self.P=} '
+            f'{self.stream_method=}, {self.string_method=}, '
+            f'{self.file_method=}, {self.user_password=}, '
+            f'{self.encryption_key=}, {self.bits=}>'
+        )
 
 
 class Encryption(NamedTuple):

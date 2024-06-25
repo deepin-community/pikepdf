@@ -23,86 +23,19 @@ describes how it should transform the stream of tokens.
 Content stream parsers
 ----------------------
 
-.. autofunction:: pikepdf.parse_content_stream
+.. autoapifunction:: pikepdf.parse_content_stream
 
-.. autofunction:: pikepdf.unparse_content_stream
+.. autoapifunction:: pikepdf.unparse_content_stream
 
 
 Content stream token filters
 ----------------------------
 
-.. autoclass:: pikepdf.Token
+.. autoapiclass:: pikepdf.Token
     :members:
 
-.. class:: pikepdf.TokenType
+.. autoapiclass:: pikepdf.TokenType
+    :members:
 
-    When filtering content streams, each token is labeled according to the role
-    in plays.
-
-    **Standard tokens**
-
-    .. attribute:: array_open
-
-    .. attribute:: array_close
-
-    .. attribute:: brace_open
-
-    .. attribute:: brace_close
-
-    .. attribute:: dict_open
-
-    .. attribute:: dict_close
-
-        These tokens mark the start and end of an array, text string, and
-        dictionary, respectively.
-
-    .. attribute:: integer
-
-    .. attribute:: real
-
-    .. attribute:: null
-
-    .. attribute:: bool
-
-        The token data represents an integer, real number, null or boolean,
-        respectively.
-
-    .. attribute:: name_
-
-        The token is the name (pikepdf.Name) of an object. In practice, these
-        are among the most interesting tokens.
-
-        .. versionchanged:: 3.0
-            In versions older than 3.0, ``.name`` was used instead. This interfered
-            with semantics of the ``Enum`` object, so this was fixed.
-
-    .. attribute:: inline_image
-
-        An inline image in the content stream. The whole inline image is
-        represented by the single token.
-
-    **Lexical tokens**
-
-    .. attribute:: comment
-
-        Signifies a comment that appears in the content stream.
-
-    .. attribute:: word
-
-        Otherwise uncategorized bytes are returned as ``word`` tokens. PDF
-        operators are words.
-
-    .. attribute:: bad
-
-        An invalid token.
-
-    .. attribute:: space
-
-        Whitespace within the content stream.
-
-    .. attribute:: eof
-
-        Denotes the end of the tokens in this content stream.
-
-.. autoclass:: pikepdf.TokenFilter
+.. autoapiclass:: pikepdf.TokenFilter
     :members:

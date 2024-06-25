@@ -44,6 +44,7 @@ std::vector<QPDFPageObjectHelper> PageList::get_page_objs_impl(py::slice slice)
     if (!slice.compute(this->count(), &start, &stop, &step, &slicelength))
         throw py::error_already_set(); // LCOV_EXCL_LINE
     std::vector<QPDFPageObjectHelper> result;
+    result.reserve(slicelength);
     for (py::size_t i = 0; i < slicelength; ++i) {
         auto oh = this->get_page(start);
         result.push_back(oh);
@@ -134,8 +135,15 @@ void PageList::delete_pages_from_iterable(py::slice slice)
 
 py::size_t PageList::count() { return this->doc.getAllPages().size(); }
 
-void PageList::try_insert_qpdfobject_as_page(py::size_t index, py::handle obj)
+QPDFPageObjectHelper PageList::page_from_object(py::handle obj)
 {
+    try {
+        auto page = obj.cast<QPDFPageObjectHelper>();
+        return page;
+    } catch (py::cast_error &) {
+        // Perhaps obj is a dictionary with Type=Name.Page
+    }
+
     QPDFObjectHandle oh, indirect_oh;
     try {
         oh = obj.cast<QPDFObjectHandle>();
@@ -143,6 +151,10 @@ void PageList::try_insert_qpdfobject_as_page(py::size_t index, py::handle obj)
         throw py::type_error("tried to insert object which is neither pikepdf.Page "
                              "nor pikepdf.Dictionary with Type=Name.Page");
     }
+
+    python_warning("Implicit conversion of pikepdf.Dictionary to pikepdf.Page is "
+                   "deprecated. Use pikepdf.Page(dictionary) instead.",
+        PyExc_DeprecationWarning);
 
     bool copied = false;
     try {
@@ -161,8 +173,7 @@ void PageList::try_insert_qpdfobject_as_page(py::size_t index, py::handle obj)
                                              "to insert this as a page: ") +
                                  objecthandle_repr(oh));
         }
-        auto page = QPDFPageObjectHelper(indirect_oh);
-        this->insert_page(index, page);
+        return QPDFPageObjectHelper(indirect_oh);
     } catch (std::runtime_error &) {
         // If we created a new temporary indirect object to hold the page, and
         // failed to insert, delete the object we created as best we can.
@@ -181,21 +192,31 @@ void PageList::insert_page(py::size_t index, py::handle obj)
         this->insert_page(index, poh);
         return;
     } catch (py::cast_error &) {
-        this->try_insert_qpdfobject_as_page(index, obj);
+        auto page = this->page_from_object(obj);
+        this->insert_page(index, page);
         return;
     }
-    throw py::type_error("only pages can be inserted to a page list");
 }
 
 void PageList::insert_page(py::size_t index, QPDFPageObjectHelper page)
 {
-    auto doc = QPDFPageDocumentHelper(*this->qpdf);
     if (index != this->count()) {
         auto refpage = this->get_page(index);
-        doc.addPageAt(page, true, refpage);
+        this->doc.addPageAt(page, true, refpage);
     } else {
-        doc.addPage(page, false);
+        this->doc.addPage(page, false);
     }
+}
+
+void PageList::append_page(py::handle obj)
+{
+    auto page = this->page_from_object(obj);
+    this->doc.addPage(page, false);
+}
+
+void PageList::append_page(QPDFPageObjectHelper page)
+{
+    this->doc.addPage(page, false);
 }
 
 QPDFPageObjectHelper from_objgen(QPDF &q, QPDFObjGen og)
@@ -206,8 +227,22 @@ QPDFPageObjectHelper from_objgen(QPDF &q, QPDFObjGen og)
     return QPDFPageObjectHelper(h);
 }
 
+QPDFPageObjectHelper PageListIterator::next()
+{
+    if (this->index >= this->pages.size()) {
+        throw py::stop_iteration();
+    }
+    auto page = this->pages.at(this->index);
+    this->index++;
+    return page;
+}
+
 void init_pagelist(py::module_ &m)
 {
+    py::class_<PageListIterator>(m, "_PageListIterator")
+        .def("__iter__", [](PageListIterator &it) { return it; })
+        .def("__next__", &PageListIterator::next);
+
     py::class_<PageList>(m, "PageList")
         .def(
             "__getitem__",
@@ -238,180 +273,90 @@ void init_pagelist(py::module_ &m)
                         "page access out of range in 1-based indexing");
                 return pl.get_page(pnum - 1);
             },
-            R"~~~(
-            Look up page number in ordinal numbering, ``.p(1)`` is the first page.
-
-            This is provided for convenience in situations where ordinal numbering
-            is more natural. It is equivalent to ``.pages[pnum - 1]``. ``.p(0)``
-            is an error and negative indexing is not supported.
-
-            If the PDF defines custom page labels (such as labeling front matter
-            with Roman numerals and the main body with Arabic numerals), this
-            function does not account for that. Use :attr:`pikepdf.Page.label`
-            to get the page label for a page.
-            )~~~",
             py::arg("pnum"))
-        .def("__iter__", [](PageList &pl) { return PageList(pl.qpdf, 0); })
-        .def("__next__",
-            [](PageList &pl) {
-                if (pl.iterpos < pl.count())
-                    return pl.get_page(pl.iterpos++);
-                throw py::stop_iteration();
-            })
+        .def(
+            "__iter__",
+            [](PageList &pl) { return PageListIterator{pl, 0}; },
+            py::keep_alive<0, 1>())
         .def(
             "insert",
             [](PageList &pl, py::ssize_t index, py::object obj) {
                 auto uindex = uindex_from_index(pl, index);
                 pl.insert_page(uindex, obj);
             },
-            R"~~~(
-            Insert a page at the specified location.
-
-            Args:
-                index (int): location at which to insert page, 0-based indexing
-                obj (pikepdf.Object): page object to insert
-            )~~~",
             py::arg("index"), // LCOV_EXCL_LINE
             py::arg("obj"))
-        .def(
-            "reverse",
+        .def("reverse",
             [](PageList &pl) {
                 py::slice ordinary_indices(0, pl.count(), 1);
-                py::int_ step(-1);
-                py::slice reversed = py::reinterpret_steal<py::slice>(
-                    PySlice_New(Py_None, Py_None, step.ptr()));
+                py::slice reversed{{}, {}, -1};
                 py::list reversed_pages = pl.get_pages(reversed);
                 pl.set_pages_from_iterable(ordinary_indices, reversed_pages);
-            },
-            "Reverse the order of pages.")
+            })
         .def(
             "append",
-            [](PageList &pl, QPDFPageObjectHelper &page) {
-                pl.insert_page(pl.count(), page);
-            },
-            R"~~~(
-            Add another page to the end.
-
-            While this method copies pages from one document to another, it does not
-            copy certain metadata such as annotations, form fields, bookmarks or
-            structural tree elements. Copying these is a more complex, application
-            specific operation.
-            )~~~",
+            [](PageList &pl, QPDFPageObjectHelper &page) { pl.append_page(page); },
             py::arg("page"))
         .def(
             "append",
-            [](PageList &pl, py::handle page) { pl.insert_page(pl.count(), page); },
-            R"~~~(
-            Add another page to the end.
-
-            While this method copies pages from one document to another, it does not
-            copy certain metadata such as annotations, form fields, bookmarks or
-            structural tree elements. Copying these is a more complex, application
-            specific operation.
-            )~~~",
+            [](PageList &pl, py::handle page) { pl.append_page(page); },
             py::arg("page"))
         .def(
             "extend",
             [](PageList &pl, PageList &other) {
-                auto other_count = other.count();
-                for (decltype(other_count) i = 0; i < other_count; i++) {
-                    if (other_count != other.count())
-                        throw py::value_error(
-                            "source page list modified during iteration");
-                    pl.insert_page(pl.count(), other.get_page(i));
+                auto other_pages = other.doc.getAllPages();
+                for (auto &page : other_pages) {
+                    pl.append_page(page);
                 }
             },
-            R"~~~(
-            Extend the ``Pdf`` by adding pages from another ``Pdf.pages``.
-
-            While this method copies pages from one document to another, it does not
-            copy certain metadata such as annotations, form fields, bookmarks or
-            structural tree elements. Copying these is a more complex, application
-            specific operation.
-            )~~~",
             py::arg("other"))
         .def(
             "extend",
             [](PageList &pl, py::iterable iterable) {
                 py::iterator it = iterable.attr("__iter__")();
                 while (it != py::iterator::sentinel()) {
-                    // assert_pyobject_is_page_obj(*it);
                     assert_pyobject_is_page_helper(*it);
-                    pl.insert_page(pl.count(), *it);
+                    pl.append_page(*it);
                     ++it;
                 }
             },
-            R"~~~(
-            Extend the ``Pdf`` by adding pages from an iterable of pages.
-
-            While this method copies pages from one document to another, it does not
-            copy certain metadata such as annotations, form fields, bookmarks or
-            structural tree elements. Copying these is a more complex, application
-            specific operation.
-            )~~~",
             py::arg("iterable"))
+        .def("remove",
+            [](PageList &pl, QPDFPageObjectHelper &page) {
+                try {
+                    pl.doc.removePage(page);
+                } catch (const QPDFExc &e) {
+                    throw py::value_error("Page is not referenced in the PDF");
+                }
+            })
         .def(
             "remove",
-            [](PageList &pl, py::kwargs kwargs) {
-                auto pnum = kwargs["p"].cast<py::ssize_t>();
+            [](PageList &pl, py::ssize_t pnum) {
                 if (pnum <= 0) // Indexing past end is checked in .get_page
                     throw py::index_error(
                         "page access out of range in 1-based indexing");
                 pl.delete_page(pnum - 1);
             },
-            R"~~~(
-            Remove a page (using 1-based numbering)
-
-            Args:
-                p (int): 1-based page number
-            )~~~")
-        .def(
-            "index",
+            py::kw_only(),
+            py::arg("p"))
+        .def("index",
             [](PageList &pl, const QPDFObjectHandle &h) {
                 return page_index(*pl.qpdf, h);
-            },
-            R"~~~(
-            Given a pikepdf.Object that is a page, find the index number.
-
-            That is, returns ``n`` such that ``pdf.pages[n] == this_page``.
-            A ``ValueError`` exception is thrown if the page does not belong to
-            to this ``Pdf``. The first page has index 0.
-            )~~~")
-        .def(
-            "index",
+            })
+        .def("index",
             [](PageList &pl, const QPDFPageObjectHelper &poh) {
                 return page_index(*pl.qpdf, poh.getObjectHandle());
-            },
-            R"~~~(
-            Given a pikepdf.Page (page helper), find the index.
-
-            That is, returns ``n`` such that ``pdf.pages[n] == this_page``.
-            A ``ValueError`` exception is thrown if the page does not belong to
-            to this ``Pdf``. The first page has index 0.
-            )~~~")
+            })
         .def("__repr__",
             [](PageList &pl) {
                 return std::string("<pikepdf._core.PageList len=") +
                        std::to_string(pl.count()) + std::string(">");
             })
-        .def(
-            "from_objgen",
+        .def("from_objgen",
             [](PageList &pl, int obj, int gen) {
                 return from_objgen(*pl.qpdf, QPDFObjGen(obj, gen));
-            },
-            R"~~~(
-            Given an "objgen" (object ID, generation), return the page.
-
-            Raises an exception if no page matches.
-            )~~~")
-        .def(
-            "from_objgen",
-            [](PageList &pl, std::pair<int, int> objgen) {
-                return from_objgen(*pl.qpdf, QPDFObjGen(objgen.first, objgen.second));
-            },
-            R"~~~(
-            Given an "objgen" (object ID, generation), return the page.
-
-            Raises an exception if no page matches.
-            )~~~");
+            })
+        .def("from_objgen", [](PageList &pl, std::pair<int, int> objgen) {
+            return from_objgen(*pl.qpdf, QPDFObjGen(objgen.first, objgen.second));
+        });
 }

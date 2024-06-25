@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 """Bump the version number in all the right places."""
+
 from __future__ import annotations
 
 import glob
@@ -19,8 +20,9 @@ import pikepdf
 
 config = [
     # file path, version find/replace format
-    ("src/pikepdf/__init__.py", '__version__ = "{}"'),
+    ("src/pikepdf/_version.py", '__version__ = "{}"'),
     ("pyproject.toml", 'version = "{}"'),
+    ("docs/conf.py", 'release = "{}"'),
 ]
 
 RED = "\u001b[31m"

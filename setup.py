@@ -1,6 +1,11 @@
 # SPDX-FileCopyrightText: 2022 James R. Barlow
 # SPDX-License-Identifier: MPL-2.0
 
+"""Setup script for pikepdf, to compile pikepdf._core.
+
+We use pyproject.toml whenever possible for settings.
+"""
+
 from __future__ import annotations
 
 import sys
@@ -18,6 +23,7 @@ extra_includes = []
 extra_library_dirs = []
 qpdf_source_tree = environ.get('QPDF_SOURCE_TREE', '')
 qpdf_build_libdir = environ.get('QPDF_BUILD_LIBDIR', '')
+qpdf_future = environ.get('QPDF_FUTURE', '')
 
 if qpdf_source_tree:
     # Point this to qpdf source tree built with shared libraries
@@ -64,6 +70,9 @@ for extra_path in chain([qpdf_source_tree], extra_includes, extra_library_dirs):
     if extra_path and not exists(extra_path):
         raise FileNotFoundError(extra_path)
 
+macros = [('POINTERHOLDER_TRANSITION', '4')]
+if qpdf_future:
+    macros.append(('QPDF_FUTURE', 'True'))
 # Use cast because mypy has trouble seeing Pybind11Extension is a subclass of
 # Extension.
 extmodule: Extension = cast(
@@ -76,7 +85,7 @@ extmodule: Extension = cast(
             # Path to pybind11 headers
             *extra_includes,
         ],
-        define_macros=[('POINTERHOLDER_TRANSITION', '4')],
+        define_macros=macros,
         library_dirs=[*extra_library_dirs],
         libraries=['qpdf'],
         cxx_std=17,
@@ -97,8 +106,8 @@ if shims_enabled:
             extmodule.extra_link_args.append(f'-Wl,-rpath,{lib}')  # type: ignore
 
 if __name__ == '__main__':
-    with ParallelCompile("PIKEPDF_NUM_BUILD_JOBS"):  # optional envvar
+    with ParallelCompile('PIKEPDF_NUM_BUILD_JOBS'):  # optional envvar
         setup(
             ext_modules=[extmodule],
-            cmdclass={"build_ext": build_ext},  # type: ignore
+            cmdclass={'build_ext': build_ext},  # type: ignore
         )

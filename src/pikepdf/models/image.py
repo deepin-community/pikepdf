@@ -18,21 +18,18 @@ from typing import Any, BinaryIO, Callable, NamedTuple, TypeVar, Union, cast
 from PIL import Image
 from PIL.ImageCms import ImageCmsProfile
 
-from pikepdf import (
+from pikepdf import jbig2
+from pikepdf._core import Buffer, Pdf, PdfError, StreamDecodeLevel
+from pikepdf._exceptions import DependencyError
+from pikepdf.models import _transcoding
+from pikepdf.objects import (
     Array,
     Dictionary,
     Name,
     Object,
-    Pdf,
-    PdfError,
     Stream,
-    StreamDecodeLevel,
     String,
-    jbig2,
 )
-from pikepdf._core import Buffer
-from pikepdf._exceptions import DependencyError
-from pikepdf.models import _transcoding
 
 T = TypeVar('T')
 
@@ -357,6 +354,13 @@ class PdfImageBase(ABC):
     def as_pil_image(self) -> Image.Image:
         """Convert this PDF image to a Python PIL (Pillow) image."""
 
+    def _repr_png_(self) -> bytes:
+        """Display hook for IPython/Jupyter."""
+        b = BytesIO()
+        with self.as_pil_image() as im:
+            im.save(b, 'PNG')
+            return b.getvalue()
+
 
 class PdfImage(PdfImageBase):
     """Support class to provide a consistent API for manipulating PDF images.
@@ -491,7 +495,7 @@ class PdfImage(PdfImageBase):
         obj_copy.DecodeParms = Array(self.decode_parms[:n])
         return obj_copy.read_bytes(StreamDecodeLevel.specialized), self.filters[n:]
 
-    def _extract_direct(self, *, stream: BinaryIO) -> str:
+    def _extract_direct(self, *, stream: BinaryIO) -> str | None:
         """Attempt to extract the image directly to a usable image file.
 
         If there is no way to extract the image without decompressing or
@@ -543,7 +547,7 @@ class PdfImage(PdfImageBase):
             stream.write(data)
             return '.jpg'
 
-        raise NotExtractableError()
+        return None
 
     def _extract_transcoded_1248bits(self) -> Image.Image:
         """Extract an image when there are 1/2/4/8 bits packed in byte data."""
@@ -642,10 +646,9 @@ class PdfImage(PdfImageBase):
         Returns:
             The file format extension.
         """
-        try:
-            return self._extract_direct(stream=stream)
-        except NotExtractableError:
-            pass
+        direct_extraction = self._extract_direct(stream=stream)
+        if direct_extraction:
+            return direct_extraction
 
         im = None
         try:
@@ -684,10 +687,10 @@ class PdfImage(PdfImageBase):
         Images might be saved as any of .png, .jpg, or .tiff.
 
         Examples:
-            >>> im.extract_to(stream=bytes_io)
+            >>> im.extract_to(stream=bytes_io)  # doctest: +SKIP
             '.png'
 
-            >>> im.extract_to(fileprefix='/tmp/image00')
+            >>> im.extract_to(fileprefix='/tmp/image00')  # doctest: +SKIP
             '/tmp/image00.jpg'
 
         Args:
@@ -730,13 +733,11 @@ class PdfImage(PdfImageBase):
 
         Caller must close the image.
         """
-        try:
-            bio = BytesIO()
-            self._extract_direct(stream=bio)
+        bio = BytesIO()
+        direct_extraction = self._extract_direct(stream=bio)
+        if direct_extraction:
             bio.seek(0)
             return Image.open(bio)
-        except NotExtractableError:
-            pass
 
         im = self._extract_transcoded()
         if not im:
@@ -807,17 +808,14 @@ class PdfImage(PdfImageBase):
         self._pdf_source = pdf
 
     def __repr__(self):
+        try:
+            mode = self.mode
+        except NotImplementedError:
+            mode = '?'
         return (
-            f'<pikepdf.PdfImage image mode={self.mode} '
+            f'<pikepdf.PdfImage image mode={mode} '
             f'size={self.width}x{self.height} at {hex(id(self))}>'
         )
-
-    def _repr_png_(self) -> bytes:
-        """Display hook for IPython/Jupyter."""
-        b = BytesIO()
-        with self.as_pil_image() as im:
-            im.save(b, 'PNG')
-            return b.getvalue()
 
 
 class PdfJpxImage(PdfImage):
@@ -841,12 +839,15 @@ class PdfJpxImage(PdfImage):
             and self._jpxpil == other._jpxpil
         )
 
-    def _extract_direct(self, *, stream: BinaryIO):
+    def _extract_direct(self, *, stream: BinaryIO) -> str | None:
         data, filters = self._remove_simple_filters()
         if filters != ['/JPXDecode']:
-            raise UnsupportedImageTypeError(self.filters)
+            return None
         stream.write(data)
         return '.jp2'
+
+    def _extract_transcoded(self) -> Image.Image:
+        return super()._extract_transcoded()
 
     @property
     def _colorspaces(self):
@@ -1019,7 +1020,7 @@ class PdfInlineImage(PdfImageBase):
 
         # ...externalize it,
         tmppdf.pages[0].externalize_inline_images()
-        raw_img = next(im for im in tmppdf.pages[0].images.values())
+        raw_img = cast(Stream, next(im for im in tmppdf.pages[0].images.values()))
 
         # ...then use the regular PdfImage API to extract it.
         img = PdfImage(raw_img)

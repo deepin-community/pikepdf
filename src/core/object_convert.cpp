@@ -43,13 +43,9 @@ std::vector<QPDFObjectHandle> array_builder(const py::iterable iter)
 {
     StackGuard sg(" array_builder");
     std::vector<QPDFObjectHandle> result;
-    int narg = 0;
 
     for (const auto &item : iter) {
-        narg++;
-
-        auto value = objecthandle_encode(item);
-        result.push_back(value);
+        result.emplace_back(objecthandle_encode(item));
     }
     return result;
 }
@@ -91,6 +87,10 @@ QPDFObjectHandle objecthandle_encode(const py::handle handle)
             "Can't convert ObjectHelper (or subclass) to Object implicitly. "
             "Use .obj to get access the underlying object.");
     }
+    if (py::isinstance<QPDFObjectHandle::Rectangle>(handle)) {
+        auto rect = handle.cast<QPDFObjectHandle::Rectangle>();
+        return QPDFObjectHandle::newFromRectangle(rect);
+    }
 
     // Special-case booleans since pybind11 coerces nonzero integers to boolean
     if (py::isinstance<py::bool_>(handle)) {
@@ -128,14 +128,6 @@ QPDFObjectHandle objecthandle_encode(const py::handle handle)
     }
 
     if (py::hasattr(obj, "__iter__")) {
-        // Kludge to prevent converting certain objects into Dictionary or Array
-        // when passed, e.g. to Object.__setitem__('/Key', ...). Specifically
-        // added for NameTree.
-        if (py::hasattr(obj, "_pikepdf_disallow_objecthandle_encode")) {
-            throw py::type_error(
-                "Can't convert this object to pikepdf.Object implicitly.");
-        }
-
         bool is_mapping = false; // PyMapping_Check is unreliable in Py3
         if (py::hasattr(obj, "keys"))
             is_mapping = true;

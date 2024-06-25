@@ -1,9 +1,11 @@
 Forwarded: not-needed
 Description: Drop non-DFSG-compatible image from docs
 
---- a/docs/tutorial.rst
-+++ b/docs/tutorial.rst
-@@ -200,13 +200,6 @@
+Index: pikepdf-8.14.0/docs/tutorial.rst
+===================================================================
+--- pikepdf-8.14.0.orig/docs/tutorial.rst
++++ pikepdf-8.14.0/docs/tutorial.rst
+@@ -248,13 +248,6 @@ Removing pages is easy too.
  Saving changes
  --------------
  

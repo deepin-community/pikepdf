@@ -22,8 +22,8 @@ from __future__ import annotations
 from secrets import token_urlsafe
 from typing import TYPE_CHECKING, Any, Iterable, Mapping, cast
 
-from . import _core
-from ._core import Object, ObjectType, Rectangle
+from pikepdf import _core
+from pikepdf._core import Matrix, Object, ObjectType, Rectangle
 
 if TYPE_CHECKING:  # pragma: no cover
     from pikepdf import Pdf
@@ -53,7 +53,7 @@ class _ObjectMeta(type(Object)):  # type: ignore
 class _NameObjectMeta(_ObjectMeta):
     """Support usage pikepdf.Name.Whatever -> Name('/Whatever')."""
 
-    def __getattr__(self, attr: str) -> Any:
+    def __getattr__(self, attr: str) -> Name:
         if attr.startswith('_') or attr == 'object_type':
             return getattr(_ObjectMeta, attr)
         return Name('/' + attr)
@@ -67,7 +67,7 @@ class _NameObjectMeta(_ObjectMeta):
             "modify a Dictionary rather than a Name?"
         )
 
-    def __getitem__(self, item: str) -> Name:
+    def __getitem__(self, item: str) -> None:
         if item.startswith('/'):
             item = item[1:]
         raise TypeError(
@@ -106,7 +106,12 @@ class Name(Object, metaclass=_NameObjectMeta):
 
     @classmethod
     def random(cls, len_: int = 16, prefix: str = '') -> Name:
-        """Generate a cryptographically strong random, valid PDF Name.
+        """Generate a cryptographically strong, random, valid PDF Name.
+
+        If you are inserting a new name into a PDF (for example,
+        name for a new image), you can use this function to generate a
+        cryptographically strong random name that is almost certainly already
+        not already in the PDF, and not colliding with other existing names.
 
         This function uses Python's secrets.token_urlsafe, which returns a
         URL-safe encoded random number of the desired length. An optional
@@ -118,7 +123,12 @@ class Name(Object, metaclass=_NameObjectMeta):
         is probably globally unique and can be treated as never colliding with
         other names.
 
-        The length of the string may vary because it is encoded.
+        The length of the returned string may vary because it is encoded,
+        but will always have ``8 * len_`` random bits.
+
+        Args:
+            len_: The length of the random string.
+            prefix: A prefix to prepend to the random string.
         """
         random_string = token_urlsafe(len_)
         return _core._new_name(f"/{prefix}{random_string}")
@@ -155,9 +165,6 @@ class String(Object, metaclass=_ObjectMeta):
         Args:
             s: The string to use. String will be encoded for
                 PDF, bytes will be constructed without encoding.
-
-        Return type:
-            pikepdf.Object
         """
         if isinstance(s, bytes):
             return _core._new_string(s)
@@ -169,22 +176,19 @@ class Array(Object, metaclass=_ObjectMeta):
 
     object_type = ObjectType.array
 
-    def __new__(cls, a: Iterable | Rectangle | None = None) -> Array:
+    def __new__(cls, a: Iterable | Rectangle | Matrix | None = None) -> Array:
         """Construct a PDF Array.
 
         Args:
             a: An iterable of objects. All objects must be either
                 `pikepdf.Object` or convertible to `pikepdf.Object`.
-
-        Return type:
-            pikepdf.Array
         """
         if isinstance(a, (str, bytes)):
             raise TypeError('Strings cannot be converted to arrays of chars')
 
         if a is None:
             a = []
-        elif isinstance(a, Rectangle):
+        elif isinstance(a, (Rectangle, Matrix)):
             return a.as_array()
         elif isinstance(a, Array):
             return cast(Array, a.__copy__())
@@ -212,9 +216,6 @@ class Dictionary(Object, metaclass=_ObjectMeta):
         In either case, the keys must be strings, and the strings
         correspond to the desired Names in the PDF Dictionary. The values
         must all be convertible to `pikepdf.Object`.
-
-        Return type:
-            pikepdf.Dictionary
         """
         if kwargs and d is not None:
             raise ValueError('Cannot use both a mapping object and keyword args')
@@ -261,26 +262,27 @@ class Stream(Object, metaclass=_ObjectMeta):
 
         Examples:
             Using kwargs:
+                >>> pdf = pikepdf.Pdf.new()
                 >>> s1 = pikepdf.Stream(
-                        pdf,
-                        b"uncompressed image data",
-                        BitsPerComponent=8,
-                        ColorSpace=Name.DeviceRGB,
-                        ...
-                    )
+                ...     pdf,
+                ...     b"uncompressed image data",
+                ...     BitsPerComponent=8,
+                ...     ColorSpace=pikepdf.Name.DeviceRGB,
+                ... )
             Using dict:
-                >>> d = pikepdf.Dictionary(...)
+                >>> pdf = pikepdf.Pdf.new()
+                >>> d = pikepdf.Dictionary(Key1=1, Key2=2)
                 >>> s2 = pikepdf.Stream(
-                        pdf,
-                        b"data",
-                        d
-                    )
+                ...     pdf,
+                ...     b"data",
+                ...     d
+                ... )
 
         .. versionchanged:: 2.2
             Support creation of ``pikepdf.Stream`` from existing dictionary.
 
         .. versionchanged:: 3.0
-            Deprecated ``obj`` argument was removed; use ``data``.
+            ``obj`` argument was removed; use ``data``.
         """
         if data is None:
             raise TypeError("Must make Stream from binary data")

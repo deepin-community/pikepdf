@@ -96,7 +96,7 @@ pdfdoc_text = text(
 @example('\r\n')
 @example('\r')
 @example('\n')
-@settings(deadline=4000)  # CI workers can be flakey
+@settings(deadline=60000)  # CI workers can be flakey
 def test_open_encoding_pdfdoc_write(tmp_path_factory, s):
     folder = tmp_path_factory.mktemp('pdfdoc')
     txt = folder / 'pdfdoc.txt'
@@ -109,7 +109,7 @@ def test_open_encoding_pdfdoc_write(tmp_path_factory, s):
 
 
 @given(pdfdoc_text)
-@settings(deadline=4000)  # CI workers can be flakey
+@settings(deadline=60000)  # CI workers can be flakey
 @example('\r\n')
 @example('\r')
 @example('\n')
@@ -148,3 +148,9 @@ def test_stream_reader(s):
     sr = pikepdf.codec.PdfDocStreamReader(bio)
     result = sr.read()
     assert result == s
+
+
+def test_pdfdoc_encode_lookup_error():
+    not_in_pdfdoc = '你好'
+    with pytest.raises(LookupError):
+        not_in_pdfdoc.encode('pdfdoc_pikepdf', errors="invalid error handler")

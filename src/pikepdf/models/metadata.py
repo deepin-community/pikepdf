@@ -12,15 +12,15 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from functools import wraps
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Set
+from typing import TYPE_CHECKING, Any, Callable, Iterator, NamedTuple, Set
 from warnings import warn
 
 from lxml import etree
 from lxml.etree import QName, XMLSyntaxError
 
-from .. import Name, Stream, String
-from .. import __version__ as pikepdf_version
-from .._xml import parse_xml
+from pikepdf._version import __version__ as pikepdf_version
+from pikepdf._xml import _Element, parse_xml
+from pikepdf.objects import Name, Stream, String
 
 if sys.version_info < (3, 9):  # pragma: no cover
     from typing import Iterable, MutableMapping
@@ -128,7 +128,7 @@ LANG_ALTS = frozenset(
 re_xml_illegal_chars = re.compile(
     r"(?u)[^\x09\x0A\x0D\x20-\U0000D7FF\U0000E000-\U0000FFFD\U00010000-\U0010FFFF]"
 )
-re_xml_illegal_bytes = re.compile(br"[^\x09\x0A\x0D\x20-\xFF]|&#0;")
+re_xml_illegal_bytes = re.compile(rb"[^\x09\x0A\x0D\x20-\xFF]|&#0;")
 
 # Might want to check re_xml_illegal_bytes for patterns such as:
 # br"&#(?:[0-9]|0[0-9]|1[0-9]|2[0-9]|3[0-1]
@@ -206,8 +206,8 @@ def encode_pdf_date(d: datetime) -> str:
 def decode_pdf_date(s: str) -> datetime:
     """Decode a pdfmark date to a Python datetime object.
 
-    A pdfmark date is a string in a paritcular format. See the pdfmark
-    Reference for the specification.
+    A pdfmark date is a string in a particular format, as described in
+    :func:`encode_pdf_date`.
     """
     if isinstance(s, String):
         s = str(s)
@@ -334,7 +334,7 @@ class PdfMetadata(MutableMapping):
 
     Example:
         >>> with pdf.open_metadata() as records:
-                records['dc:title'] = 'New Title'
+        ...     records['dc:title'] = 'New Title'
 
     See Also:
         :meth:`pikepdf.Pdf.open_metadata`
@@ -383,11 +383,11 @@ class PdfMetadata(MutableMapping):
     ):
         """Construct PdfMetadata. Use Pdf.open_metadata() instead."""
         self._pdf = pdf
-        self._xmp = None
         self.mark = pikepdf_mark
         self.sync_docinfo = sync_docinfo
         self._updating = False
         self.overwrite_invalid_xml = overwrite_invalid_xml
+        self._xmp = None
 
     def load_from_docinfo(
         self, docinfo, delete_missing: bool = False, raise_failure: bool = False
@@ -462,9 +462,7 @@ class PdfMetadata(MutableMapping):
             try:
                 self._xmp = parser(data)
             except (
-                XMLSyntaxError
-                if self.overwrite_invalid_xml
-                else NeverRaise  # type: ignore
+                XMLSyntaxError if self.overwrite_invalid_xml else NeverRaise  # type: ignore
             ) as e:
                 if str(e).startswith("Start tag expected, '<' not found") or str(
                     e
@@ -600,12 +598,17 @@ class PdfMetadata(MutableMapping):
         try:
             prefix, tag = name.split(':', maxsplit=1)
         except ValueError:
-            # If missing the namespace, put it in the top level namespace
-            # To do this completely correct we actually need to figure out
-            # the namespace based on context defined by parent tags. That
-            #   https://www.w3.org/2001/tag/doc/qnameids.html
-            prefix, tag = 'x', name
-        uri = cls.NS[prefix]
+            # If missing the namespace, it belongs in the default namespace.
+            # A tag such <xyz xmlns="http://example.com"> defines a default
+            # namespace of http://example.com for all enclosed tags that don't
+            # override the namespace with a colon prefix.
+            # XMP does not usually use the default namespace, so we can
+            # assume it's just blank. In practice a document that depends on
+            # defining a default namespace over some part of its content
+            # could introduce a collision.
+            # See: https://www.w3.org/TR/REC-xml-names/#dt-defaultNS
+            prefix, tag = '', name
+        uri = cls.NS.get(prefix, None)
         return str(QName(uri, tag))
 
     def _prefix_from_uri(self, uriname):
@@ -617,7 +620,7 @@ class PdfMetadata(MutableMapping):
         uri = uripart.replace('{', '')
         return self.REVERSE_NS[uri] + ':' + tag
 
-    def _get_subelements(self, node):
+    def _get_subelements(self, node: _Element) -> Any:
         """Gather the sub-elements attached to a node.
 
         Gather rdf:Bag and and rdf:Seq into set and list respectively. For
@@ -641,7 +644,8 @@ class PdfMetadata(MutableMapping):
             return result
         return ''
 
-    def _get_rdf_root(self):
+    def _get_rdf_root(self) -> _Element:
+        assert self._xmp is not None
         rdf = self._xmp.find('.//rdf:RDF', self.NS)
         if rdf is None:
             rdf = self._xmp.getroot()
@@ -649,7 +653,9 @@ class PdfMetadata(MutableMapping):
                 raise ValueError("Metadata seems to be XML but not XMP")
         return rdf
 
-    def _get_elements(self, name: str | QName = ''):
+    def _get_elements(
+        self, name: str | QName = ''
+    ) -> Iterator[tuple[_Element, str | bytes | None, Any, _Element]]:
         """Get elements from XMP.
 
         Core routine to find elements matching name within the XMP and yield
@@ -689,7 +695,7 @@ class PdfMetadata(MutableMapping):
                 values = self._get_subelements(node)
                 yield (node, None, values, rdfdesc)
 
-    def _get_element_values(self, name=''):
+    def _get_element_values(self, name: str | QName = '') -> Iterator[Any]:
         yield from (v[2] for v in self._get_elements(name))
 
     @ensure_loaded
@@ -839,7 +845,7 @@ class PdfMetadata(MutableMapping):
                 if (
                     len(node.attrib) == 1
                     and len(node) == 0
-                    and QName(XMP_NS_RDF, 'about') in node.attrib
+                    and QName(XMP_NS_RDF, 'about') in node.attrib.keys()
                 ):
                     # The only thing left on this node is rdf:about="", so remove it
                     parent.remove(node)

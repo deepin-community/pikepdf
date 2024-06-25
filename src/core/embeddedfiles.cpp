@@ -15,77 +15,76 @@
 #include "pikepdf.h"
 #include "pipeline.h"
 
+QPDFFileSpecObjectHelper create_filespec(QPDF &q,
+    py::bytes data,
+    std::string description,
+    std::string filename,
+    std::string mime_type,
+    std::string creation_date,
+    std::string mod_date,
+    QPDFObjectHandle relationship)
+{
+    auto efstream = QPDFEFStreamObjectHelper::createEFStream(q, std::string(data));
+    auto filespec = QPDFFileSpecObjectHelper::createFileSpec(q, filename, efstream);
+
+    if (!description.empty())
+        filespec.setDescription(description);
+    if (!mime_type.empty())
+        efstream.setSubtype(mime_type);
+    if (!creation_date.empty())
+        efstream.setCreationDate(creation_date);
+    if (!mod_date.empty())
+        efstream.setModDate(mod_date);
+
+    if (relationship.isName()) {
+        filespec.getObjectHandle().replaceKey("/AFRelationship", relationship);
+    }
+    return filespec;
+}
+
 void init_embeddedfiles(py::module_ &m)
 {
     py::class_<QPDFFileSpecObjectHelper,
         std::shared_ptr<QPDFFileSpecObjectHelper>,
-        QPDFObjectHelper>(m, "AttachedFileSpec")
+        QPDFObjectHelper>(m, "AttachedFileSpec") // /Type /Filespec
         .def(py::init([](QPDF &q,
                           py::bytes data,
                           std::string description,
                           std::string filename,
                           std::string mime_type,
                           std::string creation_date,
-                          std::string mod_date) {
-            auto efstream =
-                QPDFEFStreamObjectHelper::createEFStream(q, std::string(data));
-            auto filespec =
-                QPDFFileSpecObjectHelper::createFileSpec(q, filename, efstream);
-
-            if (!description.empty())
-                filespec.setDescription(description);
-            if (!mime_type.empty())
-                efstream.setSubtype(mime_type);
-            if (!creation_date.empty())
-                efstream.setCreationDate(creation_date);
-            if (!mod_date.empty())
-                efstream.setModDate(mod_date);
-
-            return filespec;
+                          std::string mod_date,
+                          QPDFObjectHandle &relationship) {
+            return create_filespec(q,
+                data,
+                description,
+                filename,
+                mime_type,
+                creation_date,
+                mod_date,
+                relationship);
         }),
-            py::keep_alive<0, 1>(),
+            py::keep_alive<0, 1>(), // LCOV_EXCL_LINE
             py::arg("q"),
             py::arg("data"),
-            py::kw_only(),
+            py::kw_only(), // LCOV_EXCL_LINE
             py::arg("description")   = std::string(""),
             py::arg("filename")      = std::string(""),
             py::arg("mime_type")     = std::string(""),
             py::arg("creation_date") = std::string(""),
             py::arg("mod_date")      = std::string(""),
-            R"~~~(
-            Construct a attached file spec from data in memory.
-
-            To construct a file spec from a file on the computer's file system,
-            use :meth:`from_filepath`.
-
-            Args:
-                data: Resource to load.
-                description: Any description text for the attachment. May be
-                    shown in PDF viewers.
-                filename: Filename to display in PDF viewers.
-                mime_type: Helps PDF viewers decide how to display the information.
-                creation_date: PDF date string for when this file was created.
-                mod_date: PDF date string for when this file was last modified.
-            )~~~")
+            py::arg("relationship")  = QPDFObjectHandle::newName("/Unspecified"))
         .def_property("description",
             &QPDFFileSpecObjectHelper::getDescription,
-            &QPDFFileSpecObjectHelper::setDescription,
-            "Description text associated with the embedded file.")
+            &QPDFFileSpecObjectHelper::setDescription // LCOV_EXCL_LINE
+            )
         .def_property(
             "filename",
             [](QPDFFileSpecObjectHelper &spec) { return spec.getFilename(); },
             [](QPDFFileSpecObjectHelper &spec, std::string const &value) {
                 spec.setFilename(value);
-            },
-            R"~~~(
-            The main filename for this file spec.
-
-            In priority order, getting this returns the first of /UF, /F, /Unix,
-            /DOS, /Mac if multiple filenames are set. Setting this will set a UTF-8
-            encoded Unicode filename and write it to /UF.
-            )~~~")
-        .def(
-            "get_all_filenames",
+            })
+        .def("get_all_filenames",
             [](QPDFFileSpecObjectHelper &spec) -> py::dict {
                 auto filenames = spec.getFilenames();
                 py::dict result;
@@ -96,25 +95,13 @@ void init_embeddedfiles(py::module_ &m)
                     result[py::cast(key_as_name)] = py::bytes(filename);
                 }
                 return result;
-            },
-            R"~~~(
-            Return a Python dictionary that describes all filenames.
-
-            The returned dictionary is not a pikepdf Object.
-
-            Multiple filenames are generally a holdover from the pre-Unicode era.
-            Modern PDFs can generally set UTF-8 filenames and avoid using
-            punctuation or other marks that are forbidden in filenames.
-            )~~~")
+            })
         .def(
             "get_file",
             [](QPDFFileSpecObjectHelper &spec) {
                 return QPDFEFStreamObjectHelper(spec.getEmbeddedFileStream());
             },
-            py::return_value_policy::reference_internal,
-            R"~~~(
-            Return the primary (usually only) attached file.
-            )~~~")
+            py::return_value_policy::reference_internal)
         .def(
             "get_file",
             [](QPDFFileSpecObjectHelper &spec, QPDFObjectHandle &name) {
@@ -123,30 +110,22 @@ void init_embeddedfiles(py::module_ &m)
                 return QPDFEFStreamObjectHelper(
                     spec.getEmbeddedFileStream(name.getName()));
             },
-            py::return_value_policy::reference_internal,
-            R"~~~(
-            Return an attached file selected by :class:`pikepdf.Name`.
-
-            Typical names would be ``/UF`` and ``/F``. See |pdfrm| for other obsolete
-            names.
-            )~~~");
+            py::return_value_policy::reference_internal);
 
     py::class_<QPDFEFStreamObjectHelper,
         std::shared_ptr<QPDFEFStreamObjectHelper>,
-        QPDFObjectHelper>(m, "AttachedFile")
+        QPDFObjectHelper>(m, "AttachedFile") // /Type /EmbeddedFile
         .def_property_readonly("size",
-            &QPDFEFStreamObjectHelper::getSize,
-            "Get length of the attached file in bytes according to the PDF creator.")
+            &QPDFEFStreamObjectHelper::getSize // LCOV_EXCL_LINE
+            )
         .def_property("mime_type",
             &QPDFEFStreamObjectHelper::getSubtype,
-            &QPDFEFStreamObjectHelper::setSubtype,
-            "Get the MIME type of the attached file according to the PDF creator.")
-        .def_property_readonly(
-            "md5",
+            &QPDFEFStreamObjectHelper::setSubtype, // LCOV_EXCL_LINE
+            "")
+        .def_property_readonly("md5",
             [](QPDFEFStreamObjectHelper &efstream) {
                 return py::bytes(efstream.getChecksum());
-            },
-            "Get the MD5 checksum of the attached file according to the PDF creator.")
+            })
         .def_property("_creation_date",
             &QPDFEFStreamObjectHelper::getCreationDate,
             &QPDFEFStreamObjectHelper::setCreationDate)
@@ -157,6 +136,18 @@ void init_embeddedfiles(py::module_ &m)
     py::class_<QPDFEmbeddedFileDocumentHelper>(m, "Attachments")
         .def_property_readonly(
             "_has_embedded_files", &QPDFEmbeddedFileDocumentHelper::hasEmbeddedFiles)
+        .def("_attach_data",
+            [](QPDFEmbeddedFileDocumentHelper &efdh, py::str key, py::bytes data) {
+                auto ef = create_filespec(efdh.getQPDF(),
+                    std::string(data),
+                    std::string(""),
+                    std::string(key),
+                    std::string(""),
+                    std::string(""),
+                    std::string(""),
+                    QPDFObjectHandle::newName("/Unspecified"));
+                efdh.replaceEmbeddedFile(key, ef);
+            })
         .def("_get_all_filespecs",
             &QPDFEmbeddedFileDocumentHelper::getEmbeddedFiles,
             py::return_value_policy::reference_internal)

@@ -202,11 +202,10 @@ def test_slice_differing_lengths(fourpages, sandwich):
         pdf.pages[0::2] = pdf2.pages[0:1]
 
 
-@pytest.mark.timeout(1)
 def test_self_extend(fourpages):
     pdf = fourpages
-    with pytest.raises(ValueError, match="source page list modified during iteration"):
-        pdf.pages.extend(pdf.pages)
+    pdf.pages.extend(pdf.pages)
+    assert len(pdf.pages) == 8
 
 
 def test_one_based_pages(fourpages):
@@ -233,7 +232,7 @@ def test_bad_insert(fourpages):
     pdf = fourpages
     with pytest.raises(TypeError):
         pdf.pages.insert(0, 'this is a string not a page')
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError), pytest.deprecated_call():
         pdf.pages.insert(0, Dictionary(Type=Name.NotAPage, Value="Not a page"))
 
 
@@ -361,10 +360,20 @@ def test_remove_onebased(fourpages):
         fourpages.pages.remove(p=-1)
 
 
+def test_remove_by_ref(fourpages):
+    second_page = fourpages.pages[1]
+    assert second_page == fourpages.pages[1]
+    fourpages.pages.remove(second_page)
+    assert second_page not in fourpages.pages
+    assert len(fourpages.pages) == 3
+    with pytest.raises(ValueError):
+        fourpages.pages.remove(second_page)
+
+
 def test_pages_wrong_type(fourpages):
-    with pytest.raises(TypeError):
-        fourpages.pages.insert(3, {})
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError), pytest.deprecated_call():
+        fourpages.pages.insert(3, Dictionary())
+    with pytest.raises(TypeError), pytest.deprecated_call():
         fourpages.pages.insert(3, Array([42]))
 
 
@@ -478,7 +487,7 @@ def test_page_labels():
     p = Pdf.new()
     d = Dictionary(Type=Name.Page, MediaBox=[0, 0, 612, 792], Resources=Dictionary())
     for n in range(5):
-        p.pages.append(d)
+        p.pages.append(Page(d))
         p.pages[n].Contents = Stream(p, b"BT (Page %s) Tj ET" % str(n).encode())
 
     p.Root.PageLabels = p.make_indirect(
@@ -529,3 +538,11 @@ def test_page_from_objgen(graph):
     )
     with pytest.raises(ValueError):
         graph.pages.from_objgen(graph.pages[0].Contents.objgen)
+
+
+def test_page_iteration(graph, fourpages):
+    fourpages_iter = iter(fourpages.pages)
+    next(fourpages_iter)  # Discard
+    next(fourpages_iter)  # Discard
+    graph.pages.extend(fourpages_iter)  # Append remaining two
+    assert len(graph.pages) == 3

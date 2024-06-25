@@ -7,9 +7,11 @@ Subject: drop installation from docs contents
  docs/index.rst | 1 -
  1 file changed, 1 deletion(-)
 
---- a/docs/index.rst
-+++ b/docs/index.rst
-@@ -125,7 +125,6 @@
+Index: pikepdf-8.14.0/docs/index.rst
+===================================================================
+--- pikepdf-8.14.0.orig/docs/index.rst
++++ pikepdf-8.14.0/docs/index.rst
+@@ -125,7 +125,6 @@ practical examples, particular in ``pdfi
      :caption: Introduction
      :name: intro_toc
  

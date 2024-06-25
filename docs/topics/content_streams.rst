@@ -42,7 +42,7 @@ converts it from binary data form to pikepdf objects and back. In the process,
 the content stream is cleaned up. Every instruction will be separated by a line
 break.
 
-.. ipython:: python
+.. doctest::
 
   with pikepdf.open("../tests/resources/congress.pdf") as pdf:
       page = pdf.pages[0]
@@ -61,13 +61,15 @@ How content streams draw images
 This example prints a typical content stream from a real file, which like the
 contrived example above, displays an actual image.
 
-.. ipython:: python
+.. doctest::
 
   with pikepdf.open("../tests/resources/congress.pdf") as pdf:
       page = pdf.pages[0]
       commands = []
       for operands, operator in pikepdf.parse_content_stream(page):
           print(f"Operands {operands}, operator {operator}")
+          if operator == pikepdf.Operator('cm'):
+              matrix = pikepdf.Matrix(operands)
           commands.append([operands, operator])
 
 PDF content streams are stateful. The commands ``q``, ``cm`` and ``Q``
@@ -90,15 +92,17 @@ Let's continue with the file above and center the image on the page, and reduce
 its size by 50%. Because we can! For that, we need to rewrite the second command
 in the content stream.
 
-We take the original matrix (``original``) and then translated it to the center
-of this page. We know that the full page image is 200 × 304 PDF points, so we
-translate by one half on each axis: ``.translated(200/2, 304/2)``. Then we
-scale by 0.5: ``.scaled(0.5, 0.5)``.
+We take the original matrix (``matrix``) and then translated it to the center
+of this page. We're currently in a coordinate system where (0, 0) is the bottom
+left corner of the page, and (1, 1) is the top right corner. Without actually
+having to track the image's position, we can translate it by 0.25 of its
+dimensions (to create a border of 25% all around) and then scale it by 0.5.
+(We could also scale by 50%, and then translate by 50%, which would be 25% in
+the full image coordinate system.)
 
-.. ipython:: python
+.. doctest::
 
-  original = pikepdf.PdfMatrix(commands[1][0])  # command cm, operands
-  new_matrix = original.translated(200/2, 304/2).scaled(0.5, 0.5)
+  new_matrix = matrix.translated(0.25, 0.25).scaled(0.5, 0.5)
   new_matrix
 
 On an important note, the PDF coordinate system is nailed to the **bottom left**
@@ -111,8 +115,6 @@ system is more like the first quadrant of a Cartesian graph than the
    :alt: PDF positive-up coordinate system
    :figwidth: 50%
 
-Thus the command ``.translated(200/2, 304/2)`` is translated from the origin
-at the bottom left, (0, 0), to the right by 100 units, and up 152 units.
 (Some PDF programs insert a command to "flip" the coordinate system, by
 translating to the top left corner and scaling by (1, -1).)
 
@@ -120,9 +122,9 @@ After calculating our new matrix, we need to insert it back into the parsed
 content stream, "unparse" it to binary data, and replace the old content
 stream.
 
-.. ipython:: python
+.. doctest::
 
-  commands[1][0] = pikepdf.Array([*new_matrix.shorthand])
+  commands[1][0] = pikepdf.Array(new_matrix)
   new_content_stream = pikepdf.unparse_content_stream(commands)
   new_content_stream
   page.Contents = pdf.make_stream(new_content_stream)

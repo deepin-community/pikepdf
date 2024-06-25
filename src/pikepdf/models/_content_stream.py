@@ -7,7 +7,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Collection, List, Tuple, Union, cast
 
-from pikepdf import Object, ObjectType, Operator, Page, PdfError, _core
+from pikepdf._core import (
+    ContentStreamInlineImage,
+    ContentStreamInstruction,
+    Object,
+    ObjectType,
+    Page,
+    PdfError,
+    _unparse_content_stream,
+)
+from pikepdf.objects import Operator
 
 if TYPE_CHECKING:
     from pikepdf.models.image import PdfInlineImage
@@ -16,9 +25,7 @@ if TYPE_CHECKING:
 _OldContentStreamOperands = Collection[Union[Object, 'PdfInlineImage']]
 _OldContentStreamInstructions = Tuple[_OldContentStreamOperands, Operator]
 
-ContentStreamInstructions = Union[
-    _core.ContentStreamInstruction, _core.ContentStreamInlineImage
-]
+ContentStreamInstructions = Union[ContentStreamInstruction, ContentStreamInlineImage]
 
 UnparseableContentStreamInstructions = Union[
     ContentStreamInstructions, _OldContentStreamInstructions
@@ -63,10 +70,14 @@ def parse_content_stream(
             all tokens are accepted.
 
     Example:
-        >>> with pikepdf.Pdf.open(input_pdf) as pdf:
-        >>>     page = pdf.pages[0]
-        >>>     for operands, command in parse_content_stream(page):
-        >>>         print(command)
+        >>> with pikepdf.Pdf.open("../tests/resources/pal-1bit-trivial.pdf") as pdf:
+        ...     page = pdf.pages[0]
+        ...     for operands, command in pikepdf.parse_content_stream(page):
+        ...         print(command)
+        q
+        cm
+        Do
+        Q
 
     .. versionchanged:: 3.0
         Returns a list of ``ContentStreamInstructions`` instead of a list
@@ -129,7 +140,7 @@ def unparse_content_stream(
         operand-operator tuples from pikepdf 2.x.
     """
     try:
-        return _core._unparse_content_stream(instructions)
+        return _unparse_content_stream(instructions)
     except (ValueError, TypeError, RuntimeError) as e:
         raise PdfParsingError(
             "While unparsing a content stream, an error occurred"

@@ -59,8 +59,8 @@ auto rewrite_qpdf_logic_error_msg(std::string msg)
         match_replace{"QPDF", "pikepdf.Pdf"},
     };
 
-    for (auto mr : replacements) {
-        msg = std::regex_replace(msg, mr.first, mr.second);
+    for (auto [regex, replacement] : replacements) {
+        msg = std::regex_replace(msg, regex, replacement);
     }
     return msg;
 }
@@ -128,12 +128,24 @@ PYBIND11_MODULE(_core, m)
     // -- Support objects (alphabetize order) --
     init_annotation(m);
     init_embeddedfiles(m);
+    init_matrix(m);
     init_nametree(m);
     init_numbertree(m);
     init_page(m);
     init_parsers(m);
     init_rectangle(m);
     init_tokenfilter(m);
+
+    auto m_test = m.def_submodule("_test", "pikepdf._core test functions");
+    m_test
+        .def(
+            "fopen_nonexistent_file",
+            []() -> void { (void)QUtil::safe_fopen("does_not_exist__42", "rb"); },
+            "Used to test that C++ system error -> Python exception propagation works.")
+        .def(
+            "log_info",
+            [](std::string s) { return get_pikepdf_logger()->info(s); },
+            "Used to test routing of QPDF's logger to Python logging.");
 
     // -- Module level functions --
     m.def("utf8_to_pdf_doc",
@@ -147,51 +159,35 @@ PYBIND11_MODULE(_core, m)
                 return py::str(QUtil::pdf_doc_to_utf8(pdfdoc));
             })
         .def(
-            "_test_file_not_found",
-            []() -> void { (void)QUtil::safe_fopen("does_not_exist__42", "rb"); },
-            "Used to test that C++ system error -> Python exception propagation works.")
-        .def(
             "_translate_qpdf_logic_error",
             [](std::string s) { return translate_qpdf_logic_error(s).first; },
             "Used to test interpretation of QPDF errors.")
-        .def(
-            "_log_info",
-            [](std::string s) { return get_pikepdf_logger()->info(s); },
-            "Used to test routing of QPDF's logger to Python logging.")
-        .def(
-            "set_decimal_precision",
+        .def("set_decimal_precision",
             [](uint prec) {
                 DECIMAL_PRECISION = prec;
                 return DECIMAL_PRECISION;
-            },
-            "Set the number of decimal digits to use when converting floats.")
-        .def(
-            "get_decimal_precision",
-            []() { return DECIMAL_PRECISION; },
-            "Get the number of decimal digits to use when converting floats.")
+            })
+        .def("get_decimal_precision", []() { return DECIMAL_PRECISION; })
         .def(
             "get_access_default_mmap",
             []() { return MMAP_DEFAULT; },
             "Return True if default access is to use mmap.")
         .def(
             "set_access_default_mmap",
-            [](bool mmap) { MMAP_DEFAULT = mmap; },
-            "If True, ``pikepdf.open(...access_mode=access_default)`` will use mmap.")
-        .def(
-            "set_flate_compression_level",
-            [](int level) {
-                if (-1 <= level && level <= 9)
-                    Pl_Flate::setCompressionLevel(level);
-                else
-                    throw py::value_error(
-                        "Flate compression level must be between 0 and 9 (or -1)");
+            [](bool mmap) {
+                MMAP_DEFAULT = mmap;
+                return MMAP_DEFAULT;
             },
-            R"~~~(
-            Set the compression level whenever the Flate compression algorithm is used.
-
-            Args:
-                level: -1 (default), 0 (no compression), 1 to 9 (increasing compression)
-            )~~~")
+            "If True, ``pikepdf.open(...access_mode=access_default)`` will use mmap.")
+        .def("set_flate_compression_level",
+            [](int level) {
+                if (-1 <= level && level <= 9) {
+                    Pl_Flate::setCompressionLevel(level);
+                    return level;
+                }
+                throw py::value_error(
+                    "Flate compression level must be between 0 and 9 (or -1)");
+            })
         .def("_unparse_content_stream", unparse_content_stream);
 
     // -- Exceptions --

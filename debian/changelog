@@ -1,3 +1,46 @@
+pikepdf (8.15.1+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Refresh patches.
+  * Update Standards version to 4.7.0.
+
+ -- Vincent Cheng <vcheng@debian.org>  Fri, 26 Apr 2024 07:43:24 -0700
+
+pikepdf (8.14.0+dfsg-1) unstable; urgency=medium
+
+  * Team upload.
+  * New upstream version 8.14.0+dfsg.
+    - Refresh patches.
+    - Add python3-sphinx-autoapi to build-dep.
+
+ -- Anton Gladky <gladk@debian.org>  Sun, 31 Mar 2024 10:15:30 +0200
+
+pikepdf (8.7.1+dfsg-2) unstable; urgency=medium
+
+  * Update autopkgtest dependencies to fix test failure.
+
+ -- Vincent Cheng <vcheng@debian.org>  Mon, 20 Nov 2023 02:55:34 -0800
+
+pikepdf (8.7.1+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Add build-dep on python3-deprecated.
+    - Refresh patches.
+
+ -- Vincent Cheng <vcheng@debian.org>  Sun, 19 Nov 2023 08:20:55 -0800
+
+pikepdf (8.5.1+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Cheng <vcheng@debian.org>  Wed, 11 Oct 2023 10:07:26 -0700
+
+pikepdf (8.5.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Cheng <vcheng@debian.org>  Sat, 07 Oct 2023 00:33:32 -0700
+
 pikepdf (8.4.1+dfsg-1) unstable; urgency=medium
 
   * New upstream release.

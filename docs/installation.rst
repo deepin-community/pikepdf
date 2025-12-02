@@ -39,7 +39,7 @@ Binary wheels should work on most systems, **provided a recent version
 of pip is used to install them**. Old versions of pip, especially before 20.0,
 may fail to check appropriate versions.
 
-macOS 10.14 or newer is typically required for binary wheels. Older versions may
+macOS 14 or newer is typically required for binary wheels. Older versions may
 work if compiled from source.
 
 Windows 7 or newer is required. Windows wheels include a recent copy of libqpdf.
@@ -117,11 +117,10 @@ To attempt a manual install, try something like:
 
 .. code-block:: bash
 
-    pkg install python3 py38-lxml py38-pip py38-pybind11 qpdf
+    pkg install python3 py311-lxml py311-pip py311-pybind11 qpdf
     pip install --user pikepdf
 
-This procedure is known to work on FreeBSD 11.3, 12.0, 12.1-RELEASE and
-13.0-CURRENT. It has not been tested on other versions.
+This procedure is known to work on FreeBSD 13.4 and 14.1.
 
 Building from source
 --------------------

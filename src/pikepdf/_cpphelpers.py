@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 from warnings import warn
 
+from pikepdf.exceptions import PdfError
 from pikepdf.objects import Name
 
 if TYPE_CHECKING:
@@ -23,9 +24,14 @@ def update_xmp_pdfversion(pdf: Pdf, version: str) -> None:
     if Name.Metadata not in pdf.Root:
         return  # Don't create an empty XMP object just to store the version
 
-    with pdf.open_metadata(set_pikepdf_as_editor=False, update_docinfo=False) as meta:
-        if 'pdf:PDFVersion' in meta:
-            meta['pdf:PDFVersion'] = version
+    try:
+        with pdf.open_metadata(
+            set_pikepdf_as_editor=False, update_docinfo=False
+        ) as meta:
+            if 'pdf:PDFVersion' in meta:
+                meta['pdf:PDFVersion'] = version
+    except Exception as e:
+        raise PdfError("While trying to update XMP metadata, an error occurred") from e
 
 
 def _alpha(n: int) -> str:
@@ -78,7 +84,7 @@ LABEL_STYLE_MAP: dict[Name, Callable[[int], str]] = {
 
 
 def label_from_label_dict(label_dict: int | Dictionary) -> str:
-    """Convert a label dictionary returned by QPDF into a text string."""
+    """Convert a label dictionary returned by qpdf into a text string."""
     if isinstance(label_dict, int):
         return str(label_dict)
 

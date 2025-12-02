@@ -28,7 +28,7 @@ For Debian's pikepdf docs build.
  tomli; python_version < '3.11'
 --- a/pyproject.toml
 +++ b/pyproject.toml
-@@ -38,7 +38,6 @@
+@@ -42,7 +42,6 @@
  docs = [
    "Sphinx>=3",
    "sphinx-autoapi",

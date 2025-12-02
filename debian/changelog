@@ -1,8 +1,28 @@
-pikepdf (8.15.1+dfsg-1deepin0) unstable; urgency=medium
+pikepdf (9.5.2+dfsg-1) unstable; urgency=medium
 
-  * No source change upload against GCC 12.
+  * New upstream release.
 
- -- Tianyu Chen <sweetyfish@deepin.org>  Fri, 20 Sep 2024 12:15:39 +0800
+ -- Vincent Cheng <vcheng@debian.org>  Fri, 07 Feb 2025 12:59:18 -0800
+
+pikepdf (9.5.1+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Cheng <vcheng@debian.org>  Fri, 03 Jan 2025 20:32:13 -0800
+
+pikepdf (9.4.2+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Refresh patches.
+  * Drop unused dependency on python3-pkg-resources. (Closes: #1083543)
+
+ -- Vincent Cheng <vcheng@debian.org>  Wed, 20 Nov 2024 04:15:35 -0800
+
+pikepdf (9.1.1+dfsg-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Cheng <vcheng@debian.org>  Fri, 16 Aug 2024 19:41:20 -0700
 
 pikepdf (8.15.1+dfsg-1) unstable; urgency=medium
 

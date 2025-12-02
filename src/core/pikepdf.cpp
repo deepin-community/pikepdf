@@ -22,6 +22,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/iostream.h>
 #include <pybind11/buffer_info.h>
+#include <pybind11/gil_safe_call_once.h>
 
 #include "qpdf_pagelist.h"
 #include "utils.h"
@@ -56,6 +57,7 @@ auto rewrite_qpdf_logic_error_msg(std::string msg)
     const static std::vector<match_replace> replacements = {
         match_replace{"QPDF::copyForeign(?:Object)?", "pikepdf.copy_foreign"},
         match_replace{"QPDFObjectHandle", "pikepdf.Object"},
+        match_replace{"QPDFPageObjectHelper", "pikepdf.Page"},
         match_replace{"QPDF", "pikepdf.Pdf"},
     };
 
@@ -109,12 +111,21 @@ bool is_destroyed_object_error(const std::runtime_error &e)
     return std::regex_search(e.what(), error_pattern);
 }
 
+bool is_object_type_assertion_error(const std::runtime_error &e)
+{
+    static const std::regex error_pattern(
+        "operation for \\w+ attempted on object of type (?!destroyed)\\w+",
+        std::regex_constants::icase);
+
+    return std::regex_search(e.what(), error_pattern);
+}
+
 PYBIND11_MODULE(_core, m)
 {
     // py::options options;
     // options.disable_function_signatures();
 
-    m.doc()            = "pikepdf provides a Pythonic interface for QPDF";
+    m.doc()            = "pikepdf provides a Pythonic interface for qpdf";
     m.attr("__name__") = "pikepdf._core";
     m.def("qpdf_version", &QPDF::QPDFVersion, "Get libqpdf version");
 
@@ -145,7 +156,7 @@ PYBIND11_MODULE(_core, m)
         .def(
             "log_info",
             [](std::string s) { return get_pikepdf_logger()->info(s); },
-            "Used to test routing of QPDF's logger to Python logging.");
+            "Used to test routing of qpdf's logger to Python logging.");
 
     // -- Module level functions --
     m.def("utf8_to_pdf_doc",
@@ -161,7 +172,7 @@ PYBIND11_MODULE(_core, m)
         .def(
             "_translate_qpdf_logic_error",
             [](std::string s) { return translate_qpdf_logic_error(s).first; },
-            "Used to test interpretation of QPDF errors.")
+            "Used to test interpretation of qpdf errors.")
         .def("set_decimal_precision",
             [](uint prec) {
                 DECIMAL_PRECISION = prec;
@@ -191,22 +202,35 @@ PYBIND11_MODULE(_core, m)
         .def("_unparse_content_stream", unparse_content_stream);
 
     // -- Exceptions --
-    static py::exception<QPDFExc> exc_main(m, "PdfError");
-    static py::exception<QPDFExc> exc_password(m, "PasswordError");
-    static py::exception<QPDFExc> exc_datadecoding(m, "DataDecodingError");
-    static py::exception<QPDFUsage> exc_usage(m, "JobUsageError");
-    static py::exception<std::logic_error> exc_foreign(m, "ForeignObjectError");
-    static py::exception<std::runtime_error> exc_destroyedobject(
-        m, "DeletedObjectError");
+    // clang-format off
+    PYBIND11_CONSTINIT static py::gil_safe_call_once_and_store<py::object> exc_main;
+    exc_main.call_once_and_store_result(
+        [&]() { return py::exception<QPDFExc>(m, "PdfError"); });
+    PYBIND11_CONSTINIT static py::gil_safe_call_once_and_store<py::object> exc_password;
+    exc_password.call_once_and_store_result(
+        [&]() { return py::exception<QPDFExc>(m, "PasswordError"); });
+    PYBIND11_CONSTINIT static py::gil_safe_call_once_and_store<py::object> exc_datadecoding;
+    exc_datadecoding.call_once_and_store_result(
+        [&]() { return py::exception<QPDFExc>(m, "DataDecodingError"); });
+    PYBIND11_CONSTINIT static py::gil_safe_call_once_and_store<py::object> exc_usage;
+    exc_usage.call_once_and_store_result(
+        [&]() { return py::exception<QPDFUsage>(m, "JobUsageError"); });
+    PYBIND11_CONSTINIT static py::gil_safe_call_once_and_store<py::object> exc_foreign;
+    exc_foreign.call_once_and_store_result(
+        [&]() { return py::exception<std::logic_error>(m, "ForeignObjectError"); });
+    PYBIND11_CONSTINIT static py::gil_safe_call_once_and_store<py::object> exc_destroyedobject;
+    exc_destroyedobject.call_once_and_store_result(
+        [&]() { return py::exception<std::runtime_error>(m, "DeletedObjectError"); });
+    // clang-format on
     py::register_exception_translator([](std::exception_ptr p) {
         try {
             if (p)
                 std::rethrow_exception(p);
         } catch (const QPDFExc &e) {
             if (e.getErrorCode() == qpdf_e_password) {
-                exc_password(e.what());
+                py::set_error(exc_password.get_stored(), e.what());
             } else {
-                exc_main(e.what());
+                py::set_error(exc_main.get_stored(), e.what());
             }
         } catch (const QPDFSystemError &e) {
             if (e.getErrno() != 0) {
@@ -214,23 +238,25 @@ PYBIND11_MODULE(_core, m)
                 PyErr_SetFromErrnoWithFilename(
                     PyExc_OSError, e.getDescription().c_str());
             } else {
-                exc_main(e.what());
+                py::set_error(exc_main.get_stored(), e.what());
             }
         } catch (const QPDFUsage &e) {
-            exc_usage(e.what());
+            py::set_error(exc_usage.get_stored(), e.what());
         } catch (const std::logic_error &e) {
             auto trans = translate_qpdf_logic_error(e);
             if (trans.second == error_type_foreign)
-                exc_foreign(trans.first.c_str());
+                py::set_error(exc_foreign.get_stored(), trans.first.c_str());
             else if (trans.second == error_type_pdferror)
-                exc_main(trans.first.c_str());
+                py::set_error(exc_main.get_stored(), trans.first.c_str());
             else
                 std::rethrow_exception(p);
         } catch (const std::runtime_error &e) {
             if (is_data_decoding_error(e))
-                exc_datadecoding(e.what());
+                py::set_error(exc_datadecoding.get_stored(), e.what());
             else if (is_destroyed_object_error(e))
-                exc_destroyedobject(e.what());
+                py::set_error(exc_destroyedobject.get_stored(), e.what());
+            else if (is_object_type_assertion_error(e))
+                py::set_error(exc_main.get_stored(), e.what());
             else
                 std::rethrow_exception(p);
         }

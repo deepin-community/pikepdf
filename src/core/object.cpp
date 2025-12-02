@@ -28,9 +28,9 @@ Type table
 
 See objects.rst. In short and with technical details:
 
-These QPDF types are directly mapped to a native Python equivalent. The C++
+These qpdf types are directly mapped to a native Python equivalent. The C++
 object is never returned to Python; a Python object is returned instead.
-Adding one of these to a QPDF container type causes the appropriate conversion.
+Adding one of these to a qpdf container type causes the appropriate conversion.
     Boolean <-> bool
     Integer <-> int
     Real <-> Decimal
@@ -161,7 +161,7 @@ bool objecthandle_equal(QPDFObjectHandle self, QPDFObjectHandle other)
         auto self_buffer  = self.getRawStreamData();
         auto other_buffer = other.getRawStreamData();
 
-        // Early out: if underlying QPDF Buffers happen to be the same, the data is
+        // Early out: if underlying qpdf Buffers happen to be the same, the data is
         // the same
         if (self_buffer == other_buffer)
             return true;
@@ -273,7 +273,7 @@ std::shared_ptr<Buffer> get_stream_data(
     try {
         return h.getStreamData(decode_level);
     } catch (const QPDFExc &e) {
-        // Make a new exception that has the objgen info, since QPDF's
+        // Make a new exception that has the objgen info, since qpdf's
         // will not
         std::string msg = e.getMessageDetail();
         str_replace(msg, "getStreamData", "read_bytes");
@@ -332,6 +332,10 @@ void init_object(py::module_ &m)
 
     py::bind_map<ObjectMap>(m, "_ObjectMapping");
 
+// MSVC raises a false positive warning here
+#if _MSC_VER
+#    pragma warning(suppress : 4267)
+#endif
     py::class_<QPDFObjectHandle>(m, "Object")
         .def_property_readonly("_type_code", &QPDFObjectHandle::getTypeCode)
         .def_property_readonly("_type_name", &QPDFObjectHandle::getTypeName)
@@ -534,7 +538,7 @@ void init_object(py::module_ &m)
                         throw py::attribute_error(e.what());
                     else
                         throw py::attribute_error(name);
-                } catch (const py::value_error &e) {
+                } catch (const py::value_error &) {
                     if (name == std::string("__name__"))
                         throw py::attribute_error(name);
                     throw;
@@ -775,15 +779,6 @@ void init_object(py::module_ &m)
             [](py::bytes stream, py::str description) {
                 return QPDFObjectHandle::parse(
                     std::string(stream), std::string(description));
-            },
-            py::arg("stream"),
-            py::arg("description") = "")
-        .def_static(
-            "parse",
-            [](py::str stream, std::string const &description) {
-                python_warning("pikepdf.Object.parse(str) is deprecated; use bytes.",
-                    PyExc_DeprecationWarning);
-                return QPDFObjectHandle::parse(stream, description);
             },
             py::arg("stream"),
             py::arg("description") = "")

@@ -7,14 +7,17 @@ from __future__ import annotations
 
 from pikepdf.models._content_stream import (
     ContentStreamInstructions,
-    PdfParsingError,
+    PdfParsingError,  # legacy
     UnparseableContentStreamInstructions,
     parse_content_stream,
     unparse_content_stream,
 )
 from pikepdf.models.encryption import Encryption, EncryptionInfo, Permissions
-from pikepdf.models.image import PdfImage, PdfInlineImage, UnsupportedImageTypeError
-from pikepdf.models.matrix import PdfMatrix
+from pikepdf.models.image import (
+    PdfImage,
+    PdfInlineImage,
+    UnsupportedImageTypeError,  # legacy
+)
 from pikepdf.models.metadata import PdfMetadata
 from pikepdf.models.outlines import (
     Outline,
@@ -26,7 +29,7 @@ from pikepdf.models.outlines import (
 
 __all__ = [
     'ContentStreamInstructions',
-    'PdfParsingError',
+    'PdfParsingError',  # legacy
     'UnparseableContentStreamInstructions',
     'parse_content_stream',
     'unparse_content_stream',
@@ -35,12 +38,11 @@ __all__ = [
     'Permissions',
     'PdfImage',
     'PdfInlineImage',
-    'UnsupportedImageTypeError',
-    'PdfMatrix',
+    'UnsupportedImageTypeError',  # legacy
     'PdfMetadata',
     'Outline',
     'OutlineItem',
-    'OutlineStructureError',
+    'OutlineStructureError',  # legacy
     'PageLocation',
     'make_page_destination',
 ]

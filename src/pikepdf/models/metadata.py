@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import logging
 import re
-import sys
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator, MutableMapping
 from datetime import datetime, timezone
 from functools import wraps
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Callable, Iterator, NamedTuple, Set
+from typing import TYPE_CHECKING, Any, Callable, NamedTuple
 from warnings import warn
 
 from lxml import etree
@@ -21,11 +21,6 @@ from lxml.etree import QName, XMLSyntaxError
 from pikepdf._version import __version__ as pikepdf_version
 from pikepdf._xml import _Element, parse_xml
 from pikepdf.objects import Name, Stream, String
-
-if sys.version_info < (3, 9):  # pragma: no cover
-    from typing import Iterable, MutableMapping
-else:
-    from collections.abc import Iterable, MutableMapping
 
 if TYPE_CHECKING:  # pragma: no cover
     from pikepdf import Pdf
@@ -162,7 +157,7 @@ def _clean(s: str | Iterable[str], joiner: str = '; ') -> str:
     if not isinstance(s, str):
         if isinstance(s, Iterable):
             warn(f"Merging elements of {s}")
-            if isinstance(s, Set):
+            if isinstance(s, set):
                 s = joiner.join(sorted(s))
             else:
                 s = joiner.join(s)
@@ -199,7 +194,7 @@ def encode_pdf_date(d: datetime) -> str:
     tz = d.strftime('%z')
     if tz:
         sign, tz_hours, tz_mins = tz[0], tz[1:3], tz[3:5]
-        s += f"{sign}{tz_hours}'{tz_mins}'"
+        s += f"{sign}{tz_hours}'{tz_mins}"
     return s
 
 
@@ -211,20 +206,31 @@ def decode_pdf_date(s: str) -> datetime:
     """
     if isinstance(s, String):
         s = str(s)
-    if s.startswith('D:'):
-        s = s[2:]
+    t = s
+    if t.startswith('D:'):
+        t = t[2:]
+    utcs = [
+        "Z00'00'",  # Literal Z00'00', is incorrect but found in the wild
+        "Z00'00",  # Correctly formatted UTC
+        "Z",  # Alternate UTC
+    ]
+    for utc in utcs:
+        if t.endswith(utc):
+            t = t.replace(utc, "+0000")
+            break
+    t = t.replace("'", "")  # Remove apos from PDF time strings
 
-    # Literal Z00'00', is incorrect but found in the wild,
-    # probably made by OS X Quartz -- standardize
-    if s.endswith("Z00'00'"):
-        s = s.replace("Z00'00'", '+0000')
-    elif s.endswith('Z'):
-        s = s.replace('Z', '+0000')
-    s = s.replace("'", "")  # Remove apos from PDF time strings
-    try:
-        return datetime.strptime(s, r'%Y%m%d%H%M%S%z')
-    except ValueError:
-        return datetime.strptime(s, r'%Y%m%d%H%M%S')
+    date_formats = [
+        r"%Y%m%d%H%M%S%z",  # Format with timezone
+        r"%Y%m%d%H%M%S",  # Format without timezone
+        r"%Y%m%d",  # Date only format
+    ]
+    for date_format in date_formats:
+        try:
+            return datetime.strptime(t, date_format)
+        except ValueError:
+            continue
+    raise ValueError(f"Date string does not match any known format: {s} (read as {t})")
 
 
 class Converter(ABC):
@@ -278,11 +284,7 @@ class DateConverter(Converter):
         """Derive DocumentInfo from XMP."""
         if xmp_val.endswith('Z'):
             xmp_val = xmp_val[:-1] + '+00:00'
-        try:
-            dateobj = datetime.fromisoformat(xmp_val)
-        except IndexError:
-            # PyPy 3.8 may raise IndexError - convert to ValueError
-            raise ValueError(f"Invalid isoformat string: '{xmp_val}'") from None
+        dateobj = datetime.fromisoformat(xmp_val)
         return encode_pdf_date(dateobj)
 
 
@@ -774,7 +776,11 @@ class PdfMetadata(MutableMapping):
             tag_attrib = {str(QName(XMP_NS_XML, 'lang')): 'x-default'}
         for item in items:
             el = etree.SubElement(seq, str(QName(XMP_NS_RDF, 'li')), attrib=tag_attrib)
-            el.text = _clean(item)
+            if item is not None:
+                inner_text: str | None = _clean(item)
+                if inner_text == '':
+                    inner_text = None
+                el.text = inner_text
 
     def _setitem_update(self, key, val, qkey):
         # Locate existing node to replace
@@ -817,14 +823,15 @@ class PdfMetadata(MutableMapping):
             node = etree.SubElement(rdfdesc, self._qname(key))
             self._setitem_add_array(node, val)
         elif isinstance(val, str):
-            _rdfdesc = etree.SubElement(
-                rdf,
-                str(QName(XMP_NS_RDF, 'Description')),
-                attrib={
-                    QName(XMP_NS_RDF, 'about'): '',
-                    self._qname(key): _clean(val),
-                },
-            )
+            rdfdesc = rdf.find('rdf:Description[@rdf:about=""]', self.NS)
+            if rdfdesc is None:
+                rdfdesc = etree.SubElement(
+                    rdf,
+                    str(QName(XMP_NS_RDF, 'Description')),
+                    attrib={str(QName(XMP_NS_RDF, 'about')): ''},
+                )
+            node = etree.SubElement(rdfdesc, self._qname(key))
+            node.text = _clean(val)
         else:
             raise TypeError(f"Setting {key} to {val} with type {type(val)}") from None
 
